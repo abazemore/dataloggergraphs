@@ -5,12 +5,19 @@ Currently supports Tinytag, with Rotronic in progress. Also supports BMS tempera
 If you have another brand and a sample file, please feel free to adapt this and send a pull request.
 
 Columns and types are:
+
 venue     (char)
+
 location  (char)
+
 datetime  (date, POSIXct)
+
 temp      (dbl)
+
 RH        (dbl)
+
 model     (str)
+
 serial    (str)
 
 There is also a move script, which compiles annual files from different sites and makes a graph splicing two stores.
