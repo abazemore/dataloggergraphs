@@ -1,17 +1,16 @@
 # dataloggergraphs
-Adapts .csv files exported from different brands of datalogger to a common format, and combines them into one .csv file and graph.
-This was originally intended to create annual graphs for one monitor at a time, so the code combines and graphs a folder of .csv files without distinguishing the serial number or location.
+Adapts .csv files exported from different brands of datalogger to a common format, and combines them into a .csv file and graph.
 
-Currently supports Tinytag, with Rotronic in progress, and will then work on separate BMS temperature and RH sensors.
+Currently supports Tinytag, with Rotronic in progress. Also supports BMS temperature and RH sensors, though very specific to site and brand.
 If you have another brand and a sample file, please feel free to adapt this and send a pull request.
 
 Columns and types are:
-id        (int, optional)
-time      (POSIXct)
+venue     (char)
+location  (char)
+datetime  (date, POSIXct)
 temp      (dbl)
 RH        (dbl)
-dew_point (dbl, optional)
 model     (str)
 serial    (str)
-location  (str)
 
+There is also a move script, which compiles annual files from different sites and makes a graph splicing two stores.
