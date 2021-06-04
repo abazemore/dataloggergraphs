@@ -1,70 +1,161 @@
 library(shiny)
 library(shinythemes)
-library(readxl)
 source("funs.R")
 
 # Define server function  
 server <- function(input, output) {
-  # Load files and parse
-
-
-  getdata <- eventReactive(input$submit, {
+  
+  # Tab 1: Load files and parse ----
+  
+datalist <- eventReactive(input$submit, {
+  message("Creating list of files")
+  req(input$files)
+  input$files$datapath
+})
+  envdata <- eventReactive(input$submit, {
     message("Processing files")
-    req(input$files)
-    num_files <- nrow(input$files)
-    for(i in 1:num_files) {
-      parse_datalogger(input$files$datapath, input$site, input$brand) %>%
-      combine_data(input$brand)
+    req(datalist())
+# Take file list and parse each file then combine
+    lapply(datalist(), parse_datalogger,
+           site = input$site, brand = input$brand) %>%
+  combine_data(input$brand)
+  })
+  
+  # Prepare download button
+  output$prep_download_data <- downloadHandler(
+    filename = function() {str_c(date(min(envdata()$datetime)),"_to_",
+                                 date(max(envdata()$datetime)), "_data_",
+                                 input$site_short, ".csv")},
+    content = function(file) {
+      write.csv(envdata(), file)
     }
-    # lapply(input$files$datapath, parse_datalogger(site = input$site, brand = input$brand))
+  )
+  # Only show download button when data is available
+  output$download_data <- renderUI({
+    req(envdata())
+    downloadButton("prep_download_data", "Download all data")
+  })
+  
+  # Summary
+  site_summary <- eventReactive(input$submit, {
+    message("Preparing summary")
+    req(envdata())
+    summarise_site(envdata())
   })
 
-  
-  output$alldata <- renderDataTable( {req(envdata())
-    envdata()} )
-  output$summary <- renderTable ( {
-    req(envdata())
-        summarise_site(envdata())
+  output$summary <- renderDataTable ( {
+        site_summary()
     } )
-  # output$download_all <- downloadHandler(
-  #   filename = str_c(date(min(envdata$datetime),"_to_",
-  #                                            date(max(envdata$datetime), "_summary_", 
-  #                                            input$site_short, ".csv"),
-  #   # filename = function() {
-    #   str_c(get_daterange(envdata(), input$site_short), "_data.csv")
-    # },
-  #   content = function(file) {
-  #     write.csv(data(), file)
-  #   }
-  # )
-  site_summary <- eventReactive(input$files, 
-                                summarise_site(envdata()))
 
-  output$envdata <- renderDataTable({ head(envdata()) },
-                                    options = list(
-                                      pageLength = 10
-                                    ))
-  output$site_summary <- renderDataTable({ summarise_site(data) })
-  output$allsites <- renderPlot({ plot_store(envdata(), all_stores = TRUE)})
+# Prepare download button
+  output$prep_download_summary <- downloadHandler(
+    filename = function() {str_c(date(min(envdata()$datetime)),"_to_",
+                                 date(max(envdata()$datetime)), "_summary_",
+                                 input$site_short, ".csv")},
+    content = function(file) {
+      write.csv(site_summary(), file)
+    }
+  )
+  # Only show download button when data is available
+  output$download_summary <- renderUI({
+    req(site_summary())
+    downloadButton("prep_download_summary", "Download summary")
+  })
+  
+  
+  # Environmental graphs tab ----
 
+  # Sidebar dropdown unique values in summary for different stores
+  output$unique_stores <- renderUI({
+    req(site_summary())
+    radioButtons("store", "Select store to graph:",
+                 choices = unique(site_summary()$location))
+  })
+  output$graph_type <- renderUI({
+    req(site_summary())
+    radioButtons("graph_type", "Graph type:",
+                 choices = c("All data" = "all", 
+                             "Monthly summary" = "summary"))
+  })
+  # Sidebar date range
+  output$input_daterange <- renderUI({
+    req(envdata())
+    dateRangeInput("daterange", "Date range:",
+                   start = min(envdata()$datetime),
+                   end = max(envdata()$datetime),
+                   min = min(envdata()$datetime),
+                   max = max(envdata()$datetime),)
+    
+  })
+  output$allstores_graph <- renderPlot({ 
+    req(envdata(), input$daterange)
+    if(input$graph_type == "summary") {
+        graph_summary(site_summary(),
+                      start_date = input$daterange[1],
+                      end_date = input$daterange[2])
+      }
+    else {
+      graph_store(envdata(),
+                  start_date = input$daterange[1],
+                  end_date = input$daterange[2]
+                  )
+    }
+        })
+  output$singlestore_graph <- renderPlot({
+    req(envdata(), input$store)
+     if(input$graph_type == "summary") {
+       graph_summary(site_summary(), store = input$store,
+                     start_date = input$daterange[1],
+                     end_date = input$daterange[2])
+       
+     }
+    else {
+      graph_store(envdata(), store = input$store,
+                  start_date = input$daterange[1],
+                  end_date = input$daterange[2])
+    }
+  })
+  
 
-    # 
-    #     
-    #     # Downloadable csv of selected dataset ----
-    #     output$envdata_csv <- downloadHandler(
-    #       filename = str_c(date(min(envdata$datetime)),"_to_",
-    #                        date(max(envdata$datetime)), "_data_", 
-    #                        input$site_short, ".csv"),
-    #       content = write.csv(envdata),
-    #       contentType = "text/csv"
-    #     )
-    #     output$site_summary_csv <- downloadHandler(
-    #       filename = str_c(date(min(envdata$datetime)),"_to_",
-    #                        date(max(envdata$datetime)), "_summary_", 
-    #                        input$site_short, ".csv"),
-    #       content = write.csv(site_summary),
-    #       contentType = "text/csv"
-    #     )
+  # BS4971 compliance tab ----
 
- 
+  bs <- reactive({
+    message("Preparing BS4971 summary")
+    req(envdata())
+    bs4971(envdata())
+  })
+  # Download BS4971 summary button
+  # Prepare download button
+  output$prep_bssum <- downloadHandler(
+    filename = function() {str_c(date(min(envdata()$datetime)),"_to_",
+                                 date(max(envdata()$datetime)), "_BS4971_summary_",
+                                 input$site_short, ".csv")},
+    content = function(file) {
+      write.csv(bs(), file)
+    }
+  )
+  # Only show download button when data is available
+  output$download_bssum <- renderUI({
+    req(bs())
+    downloadButton("prep_bssum", "Download summary (.csv)")
+  })
+
+  # Prepare download button
+  output$prep_bsgraphs <- downloadHandler(
+    filename = function() {str_c(date(min(envdata()$datetime)),"_to_",
+                                 date(max(envdata()$datetime)), "_BS4971_graphs_",
+                                 input$site_short, ".csv")},
+    content = function(file) {
+      write.csv(bs(), file)
+    }
+  )
+  # Only show download button when data is available
+  output$download_bsgraphs <- renderUI({
+    req(bs())
+    downloadButton("prep_download_bsgraph", "Download graphs (.zip)")
+  })
+  output$bs4971_table <- renderDataTable( bs() )
+  output$bs4971_graph <- renderPlot( graph_bs4971(bs(), "B"))
+  output$bs4971_temp <- renderPlot( graph_bs4971(bs(), "t"))
+  output$bs4971_RH <- renderPlot( graph_bs4971(bs(), "R"))
 }

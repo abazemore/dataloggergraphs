@@ -3,19 +3,22 @@ source("R/funs.R")
 
 # Site information ----
 # Site name to use in tables and graph titles
-site <- "Lambeth Palace Library"
+site <- ""
 # Abbreviation of site for filenames, use underscores rather than spaces
-site_short <- "LPL"
+site_short <- ""
 # Currently supports "tinytag", "rotronic", and "trendbms"
 # Rotronic files must be converted to .csv because the .xls files are not readable
-brand <- "rotronic"
+brand <- ""
+graph_summary(site_summary)
 
 # Process the data and create summaries ----
 # Make list of filenames
-filenames <- dir("data/rotronic", full.names=TRUE)
+filenames <- dir("data/bms", full.names=TRUE)
 #Get data from files. This runs as a loop for each file.
 datalist <- lapply(filenames, parse_datalogger, site = site, brand = brand)
 envdata <- combine_data(datalist, brand)
+movetest <- graph_move(envdata1,envdata2,store1,store2,move_date,start_date,end_date)
+movetest
 # Create tables with store max/min/mean and BS4971 compliance
 site_summary <- summarise_site(envdata)
 rating_bs <- bs4971(envdata)

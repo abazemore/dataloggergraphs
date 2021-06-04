@@ -1,5 +1,6 @@
 library(tidyverse)
 library(lubridate)
+library(readxl)
 
 
 # Parse files ----
@@ -8,7 +9,7 @@ library(lubridate)
    if(brand == "tinytag") { envdata <- parse_tinytag(datafile, site) }
    if(brand == "rotronic") { envdata <- parse_rotronic(datafile, site) }
    if(brand == "trendbms") { envdata <- parse_trendBMS(datafile, site) }
-   if(brand == FALSE) { console.log("Brand not identified") }
+   if(brand == FALSE) { message("Brand not identified") }
    return(envdata)
  }
 
@@ -102,13 +103,13 @@ combine_data <- function(datalist, brand = "") {
   #Join where temperature and humidity are in separate files
   if(brand == "trendbms") {
     message("Merging T&RH files")
-  with_temp <- filter(envdata, is.na(RH)) %>%
+  with_temp <- filter(envdata, is.na(envdata$RH)) %>%
     select(-RH)
-  with_RH <- filter(envdata, is.na(temp)) %>%
+  with_RH <- filter(envdata, is.na(envdata$temp)) %>%
     select(-temp)
   envdata <- full_join(with_temp, with_RH)
   }
-    transmute(envdata, 
+  envdata <-  transmute(envdata, 
       venue = venue,
       location = location,
       datetime = datetime,
@@ -130,8 +131,10 @@ summarise_site <- function(envdata, exclude_stores = FALSE) {
   #   excluded_stores <- str_split(exclude_stores, ", ")
   #   envdata <- filter(envdata, grepl(excluded_stores, location))
   # }
+  
   site_summary <- envdata %>%
-    group_by(venue, location, year(datetime), month(datetime)) %>%
+    mutate(location = str_remove(location, " [1-3]$")) %>%
+    group_by(venue, location, year = year(datetime), month = month(datetime)) %>%
     summarise(min_temp = min(temp),
               max_temp = max(temp),
               mean_temp = mean(temp),
@@ -142,18 +145,33 @@ summarise_site <- function(envdata, exclude_stores = FALSE) {
 }
 
 # BS4971 compliance
-bs4971 <- function(envdata, exclude_stores = FALSE) {
+bs4971 <- function(envdata, exclude_stores = FALSE, 
+                   start_date = FALSE, end_date = FALSE) {
   message("Calculating BS4971 compliance")
+  subset <- envdata
+  if(start_date != FALSE) {
+    subset <- filter(subset, datetime >= start_date)
+  }
+  if(end_date != FALSE) {
+    subset <- filter(subset, datetime <= end_date)
+  }
+  
+  if(start_date == FALSE) {
+    start_date <- min(subset$datetime)
+  }
+  if(end_date == FALSE) {
+    end_date <- max(subset$datetime)
+  }
   # if(exclude_stores != FALSE) {
   #   excluded_stores <- str_split(exclude_stores, ", ")
-  #   envdata <- filter(envdata, !grepl(excluded_stores, location))
+  #   subset <- filter(subset, !grepl(excluded_stores, location))
   # }
-  rated <- envdata %>%
+  rated <- subset %>%
     group_by(venue, location)  %>%
-    mutate(location = str_remove(location, "(?<!l) [1-3]$")) %>%
+    mutate(location = str_remove(location, " [1-3]$")) %>%
     summarise(
-      start_date = min(datetime),
-      end_date = max(datetime),
+      start_period = min(datetime),
+      end_period = max(datetime),
       BS4971 = mean(temp >= 13 &
                       temp <= 23 &
                       RH >= 35 &
@@ -190,22 +208,39 @@ bs4971 <- function(envdata, exclude_stores = FALSE) {
 }
 
 # Graph ----
-dmy_style <- function(datetime) { stamp("31 December 2020", orders = "dmy")(datetime) }
+my_style <- stamp("March 2021", orders = "BY")
+dmy_style <- stamp("31 March 2021", orders = "dBY")
 graph_store <- function(envdata, 
                        store = FALSE, excluded_stores = FALSE,
                        start_date = FALSE, end_date = FALSE) {
   message("Graphing T&RH")
-breaks <- "6 months"
+breaks <- "2 months"
+min_breaks <- "1 month"
 subset <- envdata
+
+if(start_date != FALSE) {
+  subset <- filter(subset, datetime >= start_date)
+}
+if(end_date != FALSE) {
+  subset <- filter(subset, datetime <= end_date)
+}
+
+if(start_date == FALSE) {
+  start_date <- min(subset$datetime)
+}
+if(end_date == FALSE) {
+  end_date <- max(subset$datetime)
+}
 # Graph single store ----
 # store is identifying part of location, does not have to match whole string
 if(store != FALSE) {
   message("Graphing single store")
-subset <- filter(envdata, grepl(store, location))
+subset <- filter(subset, grepl(store, location))
 line_alpha <- 1
-graph_title <- subset$location[1]
+graph_title <- store
 
-graph_subtitle <- str_c(dmy_style(min(subset$datetime))," to ",dmy_style(max(subset$datetime)))
+graph_subtitle <- str_c(dmy_style(min(subset$datetime))," to ",
+                        dmy_style(max(subset$datetime)))
 }
 #Override title and subtitle if necessary
 #graph_title <- "" 
@@ -217,29 +252,25 @@ if(store == FALSE) {
    if(excluded_stores != FALSE) {
      subset <- filter(subset, !grepl(excluded_stores, location))
    }
-subset <- envdata
-breaks <- "6 months"
+breaks <- "2 months"
+min_breaks = "1 month"
 line_alpha <- 0.5
-graph_title <- str_c("All stores at ", site)
+graph_title <- str_c("All stores at ", subset$venue[1])
 graph_subtitle <- str_c(dmy_style(min(subset$datetime))," to ",
                         dmy_style(max(subset$datetime)))
  }
-if(start_date != FALSE) {
-  start_date <- min(subset$datetime)
-}
-if(end_date != FALSE) {
-  end_date <- max(subset$datetime)
-}
-dmy_style <- stamp("31 December 2020", orders = "dmy")
+
+# dmy_style <- stamp("31 December 2020", orders = "dmy")
 graph_subtitle <- str_c(dmy_style(min(subset$datetime))," to ",
                         dmy_style(max(subset$datetime)))
 
-#Create graph with time on x axis, temperature on left y axis, and RH on right y axis
+#Create graph ----
+# with time on x axis, temperature on left y axis, and RH on right y axis
 #Y scales 0-40º and 0-100%
-#Dotted lines indicate PD5454 storage guidelines
+#Dotted lines indicate BS4971 storage guidelines
 return(subset %>% ggplot(mapping = aes(x = datetime, group = location)) +
   geom_hline(
-    yintercept = 25,
+    yintercept = 23,
     color = "red",
     linetype = "dotted",
     alpha = 0.8
@@ -272,21 +303,138 @@ return(subset %>% ggplot(mapping = aes(x = datetime, group = location)) +
             alpha = line_alpha) +
   scale_x_datetime(name = "Date",
                    date_breaks = breaks,
+                   minor_breaks = min_breaks,
                    date_labels = "%m/%Y") +
   labs(title = graph_title, subtitle = graph_subtitle) +
   scale_y_continuous(
     name = "Temperature (º C, red)",
     limits = c(0, 40),
     sec.axis = sec_axis( ~ . * 2.5,
-                         name = "Rel. Humidity (%, blue)")
-  ))
+                         name = "Rel. Humidity (%, blue)")) +
+      theme(axis.title.y.left = element_text(color = "red"),
+            axis.title.y.right = element_text(color = "blue"))
+  )
 }
 
+# Graph max/min/mean summary ----
+graph_summary <- function(site_summary, 
+                          store = FALSE, excluded_stores = FALSE,
+                          start_date = FALSE, end_date = FALSE) {
+  message("Graphing max/min/mean")
+  breaks <- "6 months"
+  subset <- site_summary
+  
+  subset <-  mutate(subset, datetime = as.POSIXct(str_c(year, "-", month,"-01"),
+                                                  format = "%Y-%m-%d")) 
+  if(start_date != FALSE) {
+    subset <- filter(subset, datetime >= start_date)
+  }
+  if(end_date != FALSE) {
+    subset <- filter(subset, datetime <= end_date)
+  }
+  
+  if(start_date == FALSE) {
+    start_date <- min(subset$datetime)
+  }
+  if(end_date == FALSE) {
+    end_date <- max(subset$datetime)
+  }
+  date_style <- stamp("January 2021", orders = "BY")
+  # Graph single store ----
+  # store is identifying part of location, does not have to match whole string
+  if(store != FALSE) {
+    message("Graphing single store")
+    subset <- filter(subset, grepl(store, location))
+    line_alpha <- 1
+    fill_alpha <- 0.2
+    graph_title <- subset$location[1]
+    
+    graph_subtitle <- str_c(date_style(min(subset$datetime))," to ",date_style(max(subset$datetime)))
+  }
+  
+  #Override title and subtitle if necessary
+  #graph_title <- "" 
+  #graph_subtitle <- ""
+  
+  # Graph all stores ----
+  if(store == FALSE) {
+    message("Graphing all stores")
+    if(excluded_stores != FALSE) {
+      subset <- filter(subset, !grepl(excluded_stores, location))
+    }
+    breaks <- "3 months"
+    line_alpha <- 0.7
+    fill_alpha <- 0.05
+    graph_title <- str_c("All stores at ", subset$venue[1])
+  }
+
+  dmy_style <- stamp("31 December 2020", orders = "dmy")
+  graph_subtitle <- str_c(my_style(min(subset$datetime))," to ",
+                          my_style(max(subset$datetime)))
+  
+  #Create graph ----
+  # with time on x axis, temperature on left y axis, and RH on right y axis
+  #Y scales 0-40º and 0-100%
+  #Dotted lines indicate PD5454 storage guidelines
+  return(subset %>% ggplot(mapping = aes(x = datetime, group = location)) +
+    geom_hline(
+      yintercept = 23,
+      color = "red",
+      linetype = "dotted",
+      alpha = 0.8
+    ) +
+    geom_hline(
+      yintercept = 13,
+      color = "red",
+      linetype = "dotted",
+      alpha = 0.8
+    ) +
+    geom_hline(
+      yintercept = 60 / 2.5,
+      color = "blue",
+      linetype = "dotted",
+      alpha = 0.6
+    ) +
+    geom_hline(
+      yintercept = 35 / 2.5,
+      color = "blue",
+      linetype = "dotted",
+      alpha = 0.6
+    ) +
+    geom_line(aes(y = mean_temp),
+              color = "red",
+              size = 0.25,
+              alpha = line_alpha) +
+    geom_ribbon(aes(ymin = min_temp, ymax = max_temp),
+                fill = "red",
+                size = 0.25,
+                alpha = 0.2) +
+    geom_line(aes(y = mean_RH / 2.5),
+              color = "blue",
+              size = 0.25,
+              alpha = line_alpha) +
+    geom_ribbon(aes(ymin = min_RH, ymax = max_RH),
+                fill = "blue",
+                size = 0.25,
+                alpha = 0.2) +
+    scale_x_datetime(name = "Date",
+                     date_breaks = breaks,
+                     date_labels = "%m/%Y") +
+    labs(title = graph_title, subtitle = graph_subtitle) +
+    scale_y_continuous(
+      name = "Temperature (º C)",
+      limits = c(0, 40),
+      sec.axis = sec_axis( ~ . * 2.5,
+                           name = "Rel. Humidity (%)")
+    ) +
+    theme(axis.title.y.left = element_text(color = "red"),
+          axis.title.y.right = element_text(color = "blue")))
+}
 # Graph BS4971 compliance ----
-graph_bs4971 <- function(rated, t_RH_BS, exclude_stores = FALSE, descending = FALSE) {
+graph_bs4971 <- function(rated, t_RH_BS = "B", exclude_stores = FALSE, descending = FALSE) {
   message("Graphing BS4971 compliance")
   date_style <- stamp("March 2020", orders = "BY")
-  subset <-  filter(rated, grepl(t_RH_BS, rating)) # %>%
+  subset <-  filter(rated, grepl(t_RH_BS, rated$rating)) # %>%
   #   filter(grepl(site, venue)) # %>%
     # if(exclude_stores != FALSE) {
     # filter(!grepl(exclude_stores,location))
@@ -321,7 +469,7 @@ graph_bs4971 <- function(rated, t_RH_BS, exclude_stores = FALSE, descending = FA
   
   if(!grepl("B", t_RH_BS)) {
     message("Creating graph")
-    viz <- ggplot(subset, aes(
+    return(ggplot(subset, aes(
       x = factor(location,
                  levels = rev(levels(factor(location)))),
       y = value, fill = rating)) +
@@ -333,8 +481,7 @@ graph_bs4971 <- function(rated, t_RH_BS, exclude_stores = FALSE, descending = FA
       scale_fill_manual(name = "Rating",
                         labels = c(high, "Good", low),
                         values = c("#993322","#669933","#336699")) +
-      coord_flip()
-    return(viz)
+      coord_flip() )
   } 
   
   if(grepl("B", t_RH_BS)) {
@@ -344,7 +491,7 @@ graph_bs4971 <- function(rated, t_RH_BS, exclude_stores = FALSE, descending = FA
     # for alphabetical x = factor(location,
     # levels = rev(levels(factor(location))))
     
-    viz <- ggplot(subset, aes(
+    return(ggplot(subset, aes(
       #for alphabetical
       x = factor(location, levels = rev(levels(factor(location)))),
       #for descending
@@ -359,11 +506,53 @@ graph_bs4971 <- function(rated, t_RH_BS, exclude_stores = FALSE, descending = FA
       theme(axis.text.x = element_text(angle = 90)) +
       labs(
         title = subset$venue,
-        subtitle = subt,
+        subtitle = graph_subtitle,
         x = "Store",
         y = "Time spent in BS4971 range"
       ) +
-      coord_flip() 
-    return(viz)
+      coord_flip() )
+
   }
+}
+
+graph_move <- function(envdata1, envdata2, store1, store2, move_date, start_date, end_date) {
+  
+  premove <- filter(envdata1, grepl(store1, location)) %>%
+    filter(datetime > start_date & datetime < move_date)
+  postmove <- filter(envdata2, grepl(store2, location)) %>%
+    filter(datetime > move_date & datetime < end_date)
+  move <- bind_rows(premove, postmove)
+  end_date <- max(move$datetime)
+  breaks <- "2 months"
+  min_breaks <- "1 month"
+  date_style <- stamp("2 January 2020", orders = "dmy")
+  graph_title <- str_c(premove$location[1]," to ",postmove$location[1])
+  graph_subtitle <- str_c(date_style(start_date)," to ",
+                          date_style(end_date),
+                          ", moved ",
+                          date_style(move_date))
+  # Override if necessary, comment out if not
+  #graph_title <- ""
+  #graph_subtitle <- ""
+  
+  #Create graph with time on x axis, temperature on left y axis, and RH on right y axis
+  #Y scales 0-40º and 0-100%
+  return(move %>% ggplot(mapping = aes(x = datetime)) + 
+    geom_hline(yintercept = 23, color = "red", linetype = "dotted", alpha = 0.8) +
+    geom_hline(yintercept = 13, color = "red", linetype = "dotted", alpha = 0.8) +
+    geom_hline(yintercept = 60/2.5, color = "blue", linetype = "dotted", alpha = 0.6) +
+    geom_hline(yintercept = 35/2.5, color = "blue", alpha = 0.6) +
+    geom_vline(xintercept = as.POSIXct(move_date), color = "darkgrey") +
+    geom_line(aes(y = temp), color = "red", size = 0.25) +
+    geom_line(aes(y = RH/2.5), color = "blue", size = 0.25) +
+    scale_x_datetime(name = "Date", date_breaks = breaks, 
+                     minor_breaks = min_breaks, date_labels = "%m/%Y") +
+    labs(title = graph_title, subtitle = graph_subtitle) +
+    scale_y_continuous(
+      name = "Temperature (º C)",
+      limits = c(0,40),
+      sec.axis = sec_axis(~ .*2.5, 
+                          name = "Rel. Humidity (%)")) +
+    theme(axis.title.y.left = element_text(color = "red"),
+          axis.title.y.right = element_text(color = "blue")))
 }
