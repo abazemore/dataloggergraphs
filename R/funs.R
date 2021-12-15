@@ -9,6 +9,7 @@ library(readxl)
    if(brand == "tinytag") { envdata <- parse_tinytag(datafile, site) }
    if(brand == "rotronic") { envdata <- parse_rotronic(datafile, site) }
    if(brand == "trendbms") { envdata <- parse_trendBMS(datafile, site) }
+   if(brand == "tandd") { envdata <- parse_tandd(datafile, site) } # Not working in webapp! Strips original filename.
    if(brand == FALSE) { message("Brand not identified") }
    return(envdata)
  }
@@ -29,7 +30,7 @@ parse_tinytag <- function(datafile, site = "") {
                 datetime = datetime,
                 temp = temp,
                 RH = RH,
-                model = file_head$temp[3],
+                model = str_extract(file_head$temp[3], ".*?(?= H)"),
                 serial = file_head$temp[2]) %>%
       #Extract numeric value from temp and RH columns
       mutate(temp = as.numeric(str_extract_all(temp, "[:digit:]+\\.[:digit:]+")),
@@ -50,7 +51,6 @@ parse_rotronic <- function(datafile, site = "") {
                       col_names = c("date", "time", "RH", "temp"),
                       skip = 23) %>%
     # Add venue, location, and serial columns extracted from first rows
-    # Assuming "Device description" is the name of the logger and normally the location, ours were not set up correctly
     # Combine and parse datetime as POSIXct and extract numeric value of temp/RH
     # Model not recoverable
     transmute(venue = site,
@@ -58,7 +58,7 @@ parse_rotronic <- function(datafile, site = "") {
               datetime = as.POSIXct(parse_datetime(str_c(date, " ", time), format="%d/%m/%Y %H:%M:%S")),
               temp = as.numeric(str_extract_all(temp, "[:digit:]+\\.[:digit:]+")),
               RH = as.numeric(str_extract_all(RH, "[:digit:]+\\.[:digit:]+")),
-              model = str_c("Rotronic ",str_remove(file_head$date[5],"Version = ")," model unknown"),
+              model = str_c("Rotronic HL-1D"),
               serial = str_remove(file_head$date[6],"Serial Number = "))
   return(envdata)
 }
@@ -90,8 +90,33 @@ parse_trendBMS <- function(datafile, site = "") {
       venue = site,
       location = str_c(location_extract, logger_number),
       datetime = parse_datetime(datetime, format = "%d-%b-%y %I:%M:%S %p"),
-      model = "Trend BMS model unknown",
+      model = "Trend BMS",
       serial = "Trend BMS serial unknown")
+  return(envdata)
+}
+parse_tandd <- function(datafile, site = "") {
+  message("Parsing as T&D")
+  envdata <- read_csv(datafile, 
+                      col_names = c("datetime", "time", "lux", "UV",
+                                    "temp", "RH", "luxhours", "UVhours"),
+                      col_types = "cccccccc",
+                      skip = 3) %>%
+    # Add venue, location, model, and serial columns extracted from first rows
+    # Location and serial expecting specific filename format, not useful for other institutions
+    transmute(venue = site,
+              location = str_extract(datafile,
+                                     "(?<=^).*?(?= F))"),
+              datetime = as.POSIXct(parse_datetime(datetime), format="%d/%m/%Y %H:%M"),
+              lux = as.numeric(lux),
+              UV = as.numeric(UV),
+              temp = as.numeric(temp),
+              RH = as.numeric(RH),
+              luxhours = luxhours,
+              UVhours = UVhours,
+              model = "T&D TR-74Ui",
+              serial = str_extract(datafile,
+                                   "(?<=case ).*?(?= 20))"))
+
   return(envdata)
 }
 
@@ -109,6 +134,7 @@ combine_data <- function(datalist, brand = "") {
     select(-temp)
   envdata <- full_join(with_temp, with_RH)
   }
+  if(brand != "tandd") {
   envdata <-  transmute(envdata, 
       venue = venue,
       location = location,
@@ -116,8 +142,24 @@ combine_data <- function(datalist, brand = "") {
       temp = temp,
       RH = RH,
       model = model,
-      serial = serial
-    )
+      serial = serial)
+  }
+  if(brand == "tandd") {
+    envdata <-  transmute(envdata, 
+                          venue = venue,
+                          location = location,
+                          datetime = datetime,
+                          temp = temp,
+                          RH = RH,
+                          lux = lux,
+                          UV = UV,
+                          model = model,
+                          serial = serial)
+    }
+    # Drop improbable
+  envdata <- filter(envdata, temp < 45) %>%
+    filter(temp > -25) %>%
+    filter(RH > 1)
 
   return(envdata)
 }
@@ -125,14 +167,22 @@ combine_data <- function(datalist, brand = "") {
 # Summarise -----
 # Summary by location
 
-summarise_site <- function(envdata, exclude_stores = FALSE) {
+summarise_site <- function(envdata, start_date = FALSE,
+                           end_date = FALSE, exclude_stores = FALSE) {
   message("Summarising site")
+  subset <- envdata
+  if(start_date != FALSE) {
+    subset <- filter(subset, datetime >= start_date)
+  }
+  if(end_date != FALSE) {
+    subset <- filter(subset, datetime <= end_date)
+  }
   # if(exclude_stores != FALSE) {
   #   excluded_stores <- str_split(exclude_stores, ", ")
-  #   envdata <- filter(envdata, grepl(excluded_stores, location))
+  #   subset <- filter(subset, grepl(excluded_stores, location))
   # }
   
-  site_summary <- envdata %>%
+  site_summary <- subset %>%
     mutate(location = str_remove(location, " [1-3]$")) %>%
     group_by(venue, location, year = year(datetime), month = month(datetime)) %>%
     summarise(min_temp = min(temp),
@@ -144,6 +194,37 @@ summarise_site <- function(envdata, exclude_stores = FALSE) {
   return(site_summary)
 }
 
+light_dose <- function(envdata, start_date = FALSE, 
+                       end_date = FALSE, obs_hour = 4) {
+  subset <- envdata
+  if(start_date != FALSE) {
+    subset <- filter(subset, datetime >= start_date)
+  }
+  if(end_date != FALSE) {
+    subset <- filter(subset, datetime <= end_date)
+  }
+  start_period <- min(subset$datetime, na.rm = TRUE)
+  end_period <- max(subset$datetime, na.rm = TRUE)
+  
+  # Cumulative lux and UV,
+  # Blue Wool standards: years' dose based on 100 years to just noticeable fade
+  # Luxhours to JNF from table 4, https://www.canada.ca/en/conservation-institute/services/agents-deterioration/light.html#det5
+  dose <- envdata %>%
+    group_by(venue, location) %>%
+    summarise(start_period = start_period,
+              end_period = end_period,
+              luxhours = sum(lux, na.rm = TRUE) / obs_hour,
+              UVhours = sum(UV, na.rm = TRUE) / obs_hour,
+              BW1 = sum(lux, na.rm = TRUE) / obs_hour / 3000,
+              BW2 = sum(lux, na.rm = TRUE) / obs_hour / 10000,
+              BW3 = sum(lux, na.rm = TRUE) / obs_hour / 30000,
+              BW4 = sum(lux, na.rm = TRUE) / obs_hour / 100000,
+              BW5 = sum(lux, na.rm = TRUE) / obs_hour / 300000,
+              BW6 = sum(lux, na.rm = TRUE) / obs_hour / 1000000,
+              BW7 = sum(lux, na.rm = TRUE) / obs_hour / 3000000,
+              BW8 = sum(lux, na.rm = TRUE) / obs_hour / 10000000)
+  return(dose)
+}
 # BS4971 compliance
 bs4971 <- function(envdata, exclude_stores = FALSE, 
                    start_date = FALSE, end_date = FALSE) {
@@ -176,6 +257,7 @@ bs4971 <- function(envdata, exclude_stores = FALSE,
                       temp <= 23 &
                       RH >= 35 &
                       RH <= 60, na.rm = TRUE),
+      temp_mean = mean(temp),
       temp_low = mean(temp < 13, na.rm = TRUE),
       temp_good = mean(temp >= 13 &
                          temp <= 23, na.rm = TRUE),
@@ -212,7 +294,8 @@ my_style <- stamp("March 2021", orders = "BY")
 dmy_style <- stamp("31 March 2021", orders = "dBY")
 graph_store <- function(envdata, 
                        store = FALSE, excluded_stores = FALSE,
-                       start_date = FALSE, end_date = FALSE) {
+                       start_date = FALSE, end_date = FALSE,
+                       title = FALSE) {
   message("Graphing T&RH")
 breaks <- "2 months"
 min_breaks <- "1 month"
@@ -263,7 +346,9 @@ graph_subtitle <- str_c(dmy_style(min(subset$datetime))," to ",
 # dmy_style <- stamp("31 December 2020", orders = "dmy")
 graph_subtitle <- str_c(dmy_style(min(subset$datetime))," to ",
                         dmy_style(max(subset$datetime)))
-
+if(title != FALSE) {
+  graph_title <- title
+}
 #Create graph ----
 # with time on x axis, temperature on left y axis, and RH on right y axis
 #Y scales 0-40º and 0-100%
@@ -302,8 +387,8 @@ return(subset %>% ggplot(mapping = aes(x = datetime, group = location)) +
             size = 0.25,
             alpha = line_alpha) +
   scale_x_datetime(name = "Date",
-                   date_breaks = breaks,
-                   minor_breaks = min_breaks,
+                   # date_breaks = breaks,
+                   # minor_breaks = min_breaks,
                    date_labels = "%m/%Y") +
   labs(title = graph_title, subtitle = graph_subtitle) +
   scale_y_continuous(
@@ -316,6 +401,99 @@ return(subset %>% ggplot(mapping = aes(x = datetime, group = location)) +
   )
 }
 
+# Graph lux/UV
+graph_light <- function(envdata, 
+                        store = FALSE, excluded_stores = FALSE,
+                        start_date = FALSE, end_date = FALSE,
+                        title = FALSE) {
+  message("Graphing lux & UV")
+  breaks <- "2 months"
+  min_breaks <- "1 month"
+  subset <- envdata
+  
+  if(start_date != FALSE) {
+    subset <- filter(subset, datetime >= start_date)
+  }
+  if(end_date != FALSE) {
+    subset <- filter(subset, datetime <= end_date)
+  }
+  
+  if(start_date == FALSE) {
+    start_date <- min(subset$datetime)
+  }
+  if(end_date == FALSE) {
+    end_date <- max(subset$datetime)
+  }
+  # Graph single store ----
+  # store is identifying part of location, does not have to match whole string
+  if(store != FALSE) {
+    message("Graphing single store")
+    subset <- filter(subset, grepl(store, location))
+    line_alpha <- 1
+    graph_title <- store
+    
+    graph_subtitle <- str_c(dmy_style(min(subset$datetime))," to ",
+                            dmy_style(max(subset$datetime)))
+  }
+  #Override title and subtitle if necessary
+  #graph_title <- "" 
+  #graph_subtitle <- ""
+  
+  # Graph all stores ----
+  if(store == FALSE) {
+    message("Graphing all stores")
+    if(excluded_stores != FALSE) {
+      subset <- filter(subset, !grepl(excluded_stores, location))
+    }
+    breaks <- "2 months"
+    min_breaks = "1 month"
+    line_alpha <- 0.5
+    graph_title <- str_c("All stores at ", subset$venue[1])
+    graph_subtitle <- str_c(dmy_style(min(subset$datetime))," to ",
+                            dmy_style(max(subset$datetime)))
+  }
+  
+  if(title != FALSE) {
+    graph_title <- title
+  }
+  
+  # dmy_style <- stamp("31 December 2020", orders = "dmy")
+  graph_subtitle <- str_c(dmy_style(min(subset$datetime))," to ",
+                          dmy_style(max(subset$datetime)))
+  
+  #Create graph ----
+  # with time on x axis, temperature on left y axis, and RH on right y axis
+  #Y scales 0-40º and 0-100%
+  #Dotted lines indicate BS4971 storage guidelines
+  return(subset %>% ggplot(mapping = aes(x = datetime, group = location)) +
+           geom_hline(
+             yintercept = 50,
+             color = "darkgreen",
+             linetype = "dotted",
+             alpha = 0.8
+           ) +
+           geom_line(aes(y = lux),
+                     color = "darkgreen",
+                     size = 0.25,
+                     alpha = line_alpha) +
+           geom_line(aes(y = UV),
+                     color = "orange",
+                     size = 0.25,
+                     alpha = line_alpha) +
+           scale_x_datetime(name = "Date",
+                            # date_breaks = breaks,
+                            # minor_breaks = min_breaks,
+                            date_labels = "%m/%Y") +
+           labs(title = graph_title, subtitle = graph_subtitle) +
+           scale_y_continuous(
+             name = "Visible light (lux, green)",
+             sec.axis = sec_axis( ~ . ,
+                                  name = "UV (µW/lumen, orange")) +
+           theme(axis.title.y.left = element_text(color = "darkgreen"),
+                 axis.title.y.right = element_text(color = "orange"))
+  )
+}
+
 # Graph max/min/mean summary ----
 graph_summary <- function(site_summary, 
                           store = FALSE, excluded_stores = FALSE,
@@ -324,8 +502,7 @@ graph_summary <- function(site_summary,
   breaks <- "6 months"
   subset <- site_summary
   
-  subset <-  mutate(subset, datetime = as.POSIXct(str_c(year, "-", month,"-01"),
-                                                  format = "%Y-%m-%d")) 
+  subset <-  mutate(subset, datetime = as.POSIXct(str_c(year, "-", month,"-01"))) 
   if(start_date != FALSE) {
     subset <- filter(subset, datetime >= start_date)
   }
@@ -364,7 +541,7 @@ graph_summary <- function(site_summary,
     }
     breaks <- "3 months"
     line_alpha <- 0.7
-    fill_alpha <- 0.05
+    fill_alpha <- 0.15
     graph_title <- str_c("All stores at ", subset$venue[1])
   }
 
@@ -408,17 +585,17 @@ graph_summary <- function(site_summary,
     geom_ribbon(aes(ymin = min_temp, ymax = max_temp),
                 fill = "red",
                 size = 0.25,
-                alpha = 0.2) +
+                alpha = fill_alpha) +
     geom_line(aes(y = mean_RH / 2.5),
               color = "blue",
               size = 0.25,
               alpha = line_alpha) +
-    geom_ribbon(aes(ymin = min_RH, ymax = max_RH),
+    geom_ribbon(aes(ymin = min_RH / 2.5, ymax = max_RH / 2.5),
                 fill = "blue",
                 size = 0.25,
-                alpha = 0.2) +
+                alpha = fill_alpha) +
     scale_x_datetime(name = "Date",
-                     date_breaks = breaks,
+                     # date_breaks = breaks,
                      date_labels = "%m/%Y") +
     labs(title = graph_title, subtitle = graph_subtitle) +
     scale_y_continuous(
@@ -442,8 +619,8 @@ graph_bs4971 <- function(rated, t_RH_BS = "B", exclude_stores = FALSE, descendin
   #stacked temp or RH rating
   if (grepl("t", t_RH_BS, ignore.case = T)) {
     message("Graphing temperature compliance")
-    subt <- str_c("Temperature rating ",date_style(subset$start_date[1]),
-                  " to ",date_style(subset$end_date[1]))
+    subt <- str_c("Temperature rating ",date_style(subset$start_period[1]),
+                  " to ",date_style(subset$end_period[1]))
     high <- "Above 23C"
     low <- "Below 13C"
     high_x <- "temp_high"
@@ -452,8 +629,8 @@ graph_bs4971 <- function(rated, t_RH_BS = "B", exclude_stores = FALSE, descendin
   }
   if (grepl("r", t_RH_BS, ignore.case = T)) {
     message("Graphing RH compliance")
-    subt <- str_c("RH rating ",date_style(subset$start_date[1]),
-                  " to ",date_style(subset$end_date[1]))
+    subt <- str_c("RH rating ",date_style(subset$start_period[1]),
+                  " to ",date_style(subset$end_period[1]))
     high <- "Above 60%"
     low <- "Below 35%"
     high_x <- "RH_high"
@@ -462,9 +639,8 @@ graph_bs4971 <- function(rated, t_RH_BS = "B", exclude_stores = FALSE, descendin
   }
   if (grepl("B", t_RH_BS, ignore.case = T)) {
     message("Graphing overall compliance")
-    subt <- str_c("BS4971 compliance ", 
-                  date_style(min(subset$start_date)),
-                  " to ", date_style(max(subset$end_date)))
+    subt <- str_c("BS 4971 compliance ",date_style(subset$start_period[1]),
+                   " to ",date_style(subset$end_period[1]))
   }
   
   if(!grepl("B", t_RH_BS)) {
@@ -477,7 +653,7 @@ graph_bs4971 <- function(rated, t_RH_BS = "B", exclude_stores = FALSE, descendin
       theme(axis.text.x = element_text(angle = 90)) +
       scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
       labs(title = subset$venue, subtitle = subt,
-           x = "Store", y = "Time within range") +
+           x = "Store", y = "Percent of time within range") +
       scale_fill_manual(name = "Rating",
                         labels = c(high, "Good", low),
                         values = c("#993322","#669933","#336699")) +
@@ -506,9 +682,9 @@ graph_bs4971 <- function(rated, t_RH_BS = "B", exclude_stores = FALSE, descendin
       theme(axis.text.x = element_text(angle = 90)) +
       labs(
         title = subset$venue,
-        subtitle = graph_subtitle,
+        subtitle = subt,
         x = "Store",
-        y = "Time spent in BS4971 range"
+        y = "Percent of time in BS4971 range"
       ) +
       coord_flip() )
 
@@ -545,8 +721,10 @@ graph_move <- function(envdata1, envdata2, store1, store2, move_date, start_date
     geom_vline(xintercept = as.POSIXct(move_date), color = "darkgrey") +
     geom_line(aes(y = temp), color = "red", size = 0.25) +
     geom_line(aes(y = RH/2.5), color = "blue", size = 0.25) +
-    scale_x_datetime(name = "Date", date_breaks = breaks, 
-                     minor_breaks = min_breaks, date_labels = "%m/%Y") +
+    scale_x_datetime(name = "Date", 
+                     # date_breaks = breaks, 
+                     # minor_breaks = min_breaks, 
+                     date_labels = "%m/%Y") +
     labs(title = graph_title, subtitle = graph_subtitle) +
     scale_y_continuous(
       name = "Temperature (º C)",
