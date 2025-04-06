@@ -1,8 +1,8 @@
 # dataloggergraphs
 Adapts .csv files exported from different brands of datalogger to a common format, and combines them into a .csv file and graph.
 
-Currently supports Tinytag, with Rotronic in progress. Also supports BMS temperature and RH sensors, though very specific to site naming convention.
-If you have another brand and a sample file, please feel free to adapt this and send a pull request.
+Currently supports Tinytag and Rotronic temperature and humidity loggers, Trend BMS with a site-specific naming convention, and T&D light monitors.
+If you have another brand and a sample file, please feel free to open an issue or send a pull request.
 
 Columns and types are:
 
@@ -15,6 +15,10 @@ datetime  (date, POSIXct)
 temp      (dbl)
 
 RH        (dbl)
+
+lux      (dbl) for light logger brands only
+
+UV        (dbl) for light logger brands only
 
 model     (str)
 
