@@ -6,7 +6,15 @@ source("funs.R")
 server <- function(input, output) {
   
   # Tab 1: Load files and parse ----
-  
+  # output$contents <- renderTable({
+  #   file <- input$file1
+  #   ext <- tools::file_ext(file$datapath)
+  #   
+  #   req(file)
+  #   validate(need(ext == "csv", "Please upload a csv file"))
+  #   
+  #   read.csv(file$datapath, header = input$header)
+  # })
 datalist <- eventReactive(input$submit, {
   message("Creating list of files")
   req(input$files)
@@ -118,11 +126,23 @@ datalist <- eventReactive(input$submit, {
   
 
   # BS4971 compliance tab ----
-
+  
+  # Sidebar date range
+  output$input_daterange_bs <- renderUI({
+    req(envdata())
+    dateRangeInput("daterange_bs", "Date range:",
+                   start = min(envdata()$datetime),
+                   end = max(envdata()$datetime),
+                   min = min(envdata()$datetime),
+                   max = max(envdata()$datetime),)
+    
+  })
   bs <- reactive({
     message("Preparing BS4971 summary")
     req(envdata())
-    bs4971(envdata())
+    bs4971(envdata(), 
+           start_date = input$daterange_bs[1],
+           end_date = input$daterange_bs[2])
   })
   # Download BS4971 summary button
   # Prepare download button
@@ -158,4 +178,35 @@ datalist <- eventReactive(input$submit, {
   output$bs4971_graph <- renderPlot( graph_bs4971(bs(), "B"))
   output$bs4971_temp <- renderPlot( graph_bs4971(bs(), "t"))
   output$bs4971_RH <- renderPlot( graph_bs4971(bs(), "R"))
+  
+  
+  # Light data tab ----
+  output$input_daterange_light <- renderUI({
+    req(envdata())
+    dateRangeInput("daterange", "Date range:",
+                   start = min(envdata()$datetime),
+                   end = max(envdata()$datetime),
+                   min = min(envdata()$datetime),
+                   max = max(envdata()$datetime),)
+    
+  })
+  output$allstores_light <- renderPlot({
+    req(envdata(), input$daterange)
+      graph_light(envdata(),
+                    start_date = input$daterange[1],
+                    end_date = input$daterange[2])
+  })
+  output$singlestore_light <- renderPlot({
+    req(envdata(), input$daterange)
+    graph_light(envdata(), store = input$store,
+                start_date = input$daterange[1],
+                end_date = input$daterange[2])
+  })
+
+  output$lightdose <- renderDataTable ( {
+    light_dose(envdata(),
+               start_date = input$daterange[1],
+               end_date = input$daterange[2])
+  } )
+  
 }
