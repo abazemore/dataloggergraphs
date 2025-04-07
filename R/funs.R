@@ -8,7 +8,7 @@ parse_datalogger <- function (datafile, site = '', brand = FALSE) {
   message('Checking brand')
   if(brand == 'tinytag') { envdata <- parse_tinytag(datafile, site) }
   if(brand == 'rotronic') { envdata <- parse_rotronic(datafile, site) }
-  if(str_detect(brand, 'bms')) { envdata <- parse_trendBMS(datafile, site) }
+  if(str_detect(brand, 'trend')) { envdata <- parse_trendBMS(datafile, site) }
   if(brand == 'tandd') { envdata <- parse_TandD(datafile, site) }
   if(brand == 'miniclima') { envdata <- parse_miniClima(datafile, site) }
   if(brand == 'meaco') { envdata <- parse_meaco(datafile, site) }
@@ -304,61 +304,59 @@ subset_readings <- function(envdata, store = FALSE, exclude_stores = FALSE,
 # Summary by location
 
 summarise_site <- function(envdata, exclude_stores = FALSE, 
-                           start_date = FALSE, end_date = FALSE,
-                           standard = 'BS 4971', min_temp = FALSE, max_temp = FALSE,
-                           min_RH = FALSE, max_RH = FALSE, type = 'monthly') {
+                           start_date = FALSE, end_date = FALSE, type = 'monthly') {
   message('Summarising site')
   # Drop missing values and filter data
-  envdata <- subset_readings(envdata, exclude_stores = exclude_stores,
+  subset <- subset_readings(envdata, exclude_stores = exclude_stores,
                              start_date = start_date, end_date = end_date)
   
   # Group by location and date to appropriate level
   if(type == 'all'| type == 'annual') {
-    envdata <- group_by(envdata, site, location)
+    subset <- group_by(subset, site, location, year = year(datetime))
   }
   if(type == 'monthly') {
-    envdata <- group_by(envdata, site, location, 
+    subset <- group_by(subset, site, location, 
                         year = year(datetime), month = month(datetime)) 
   }
   if(type == 'daily') {
-    envdata <- group_by(envdata, site, location, 
-                        year=year(datetime), month = month(datetime), day = day(datetime))
+    subset <- group_by(subset, site, location, 
+                        year = year(datetime), month = month(datetime), day = day(datetime))
   }
   
   # If monitor type includes light data, include lux and UV columns
-  site_summary <- envdata %>%
+  site_summary <- subset %>%
     summarise(min_temp = min(temp, na.rm = TRUE),
               max_temp = max(temp, na.rm = TRUE),
-              mean_temp = mean(temp, na.rm = TRUE),
-              p01_temp = quantile(temp, 0.01, na.rm = TRUE),
-              p99_temp = quantile(temp, 0.99, na.rm = TRUE),
+              mean_temp = round(mean(temp, na.rm = TRUE), 1),
+              p01_temp = round(quantile(temp, 0.01, na.rm = TRUE), 1),
+              p99_temp = round(quantile(temp, 0.99, na.rm = TRUE), 1),
               range_temp = max_temp - min_temp,
               range_trim_temp = p99_temp - p01_temp,
               min_RH = min(RH, na.rm = TRUE),
               max_RH = max(RH, na.rm = TRUE),
-              mean_RH = mean(RH, na.rm = TRUE),
-              p01_RH = quantile(RH, 0.01, na.rm = TRUE),
-              p99_RH = quantile(RH, 0.99, na.rm = TRUE),
+              mean_RH = round(mean(RH, na.rm = TRUE), 1),
+              p01_RH = round(quantile(RH, 0.01, na.rm = TRUE), 1),
+              p99_RH = round(quantile(RH, 0.99, na.rm = TRUE), 1),
               range_RH = max_RH - min_RH,
-              range_trim_RH = p99_RH - p01_RH,
-              min_lux = min(lux, na.rm = TRUE),
-              max_lux = max(lux, na.rm = TRUE),
-              mean_lux = mean(lux, na.rm = TRUE),
-              p01_lux = quantile(lux, 0.01, na.rm = TRUE),
-              p99_lux = quantile(lux, 0.99, na.rm = TRUE),
-              range_trim_lux = p99_lux - p01_lux,
-              min_UV = min(UV, na.rm = TRUE),
-              max_UV = max(UV, na.rm = TRUE),
-              mean_UV = mean(UV, na.rm = TRUE),
-              p01_UV = quantile(UV, 0.01, na.rm = TRUE),
-              p99_UV = quantile(UV, 0.99, na.rm = TRUE),
-              range_trim_UV = p99_UV - p01_UV,)
-  # If no light data, drop columns
-  if(all(is.na(site_summary$p01_lux))) {
-    site_summary <- select(site_summary, -matches('lux|UV'))
+              range_trim_RH = p99_RH - p01_RH)
+  
+  if(!all(is.na(subset$lux))) {
+    light_data <- summarise(subset,
+                            min_lux = min(lux, na.rm = TRUE),
+                            max_lux = max(lux, na.rm = TRUE),
+                            mean_lux = round(mean(lux, na.rm = TRUE), 1),
+                            p01_lux = round(quantile(lux, 0.01, na.rm = TRUE), 1),
+                            p99_lux = round(quantile(lux, 0.99, na.rm = TRUE), 1),
+                            range_trim_lux = p99_lux - p01_lux,
+                            min_UV = min(UV, na.rm = TRUE),
+                            max_UV = max(UV, na.rm = TRUE),
+                            mean_UV = round(mean(UV, na.rm = TRUE), 1),
+                            p01_UV = round(quantile(UV, 0.01, na.rm = TRUE), 1),
+                            p99_UV = round(quantile(UV, 0.99, na.rm = TRUE), 1),
+                            range_trim_UV = p99_UV - p01_UV)
+    site_summary <- bind_cols(site_summary, light_data)
   }
-  site_summary <- mutate_if(site_summary, 
-                            is.numeric, ~ replace(., is.infinite(.), NA))
+
   return(site_summary)
 }
 
@@ -391,8 +389,7 @@ set_minmax <- function(standard = 'BS 4971', min_temp = FALSE, max_temp = FALSE,
     min_temp <- switch(
       standard,
       'BS 4971' = 13,
-      'PAS 198 25' = 5,
-      'PAS 198 30' = 5,
+      'PAS 198' = 5,
       'Icon' = 5,
       'Bizot' = 16
     )
@@ -403,8 +400,7 @@ set_minmax <- function(standard = 'BS 4971', min_temp = FALSE, max_temp = FALSE,
     max_temp <- switch(
       standard,
       'BS 4971' = 23,
-      'PAS 198 25' = 25,
-      'PAS 198 30' = 25,
+      'PAS 198' = 25,
       'Icon' = 23,
       'Bizot' = 25
     )
@@ -414,8 +410,7 @@ set_minmax <- function(standard = 'BS 4971', min_temp = FALSE, max_temp = FALSE,
     min_RH <- switch(
       standard,
       'BS 4971' = 35,
-      'PAS 198 25' =30,
-      'PAS 198 30' = 30,
+      'PAS 198 25' = 30,
       'Icon' = 35,
       'Bizot' = 40
     )
@@ -425,8 +420,7 @@ set_minmax <- function(standard = 'BS 4971', min_temp = FALSE, max_temp = FALSE,
     max_RH <- switch(
       standard,
       'BS 4971' = 60,
-      'PAS 198 25' = 65,
-      'PAS 198 30' = 65,
+      'PAS 198' = 65,
       'Icon' = 65,
       'Bizot' = 60
     )
@@ -521,8 +515,8 @@ graph_store <- function(envdata, title = FALSE,
   }
   
   if(title != FALSE) { graph_title <- title }
-  graph_subtitle <- paste(dmy_style(min(subset$datetime)),'to',
-                          dmy_style(max(subset$datetime)))
+  graph_subtitle <- paste(str_remove(dmy_style(min(subset$datetime)), '^0'),'to',
+                          str_remove(dmy_style(max(subset$datetime)), '^0'))
   
   # Create graph
   # with time on x axis, temperature on left y axis, and RH on right y axis
@@ -594,22 +588,23 @@ graph_summary <- function(envdata, title = FALSE,
   # Filter readings to given stores and timeframe
   subset <- subset_readings(envdata, store = store, exclude_stores = exclude_stores,
                             start_date = start_date, end_date = end_date)
-  site_summary <- summarise_site(subset, store = store, exclude_stores = exclude_stores)
+  site_summary <- summarise_site(subset, type = type)
   
-  # Set subtitle using format given
-  graph_subtitle <- paste(strftime(min(subset$datetime), format = date_format),'to',
-                          strftime(max(subset$datetime), format = date_format))
-  
-  # If the summary is monthly, the day needs to be included to graph correctly
+ 
+  # Add datetime column for graphing
+  if (type == 'daily') {
+    site_summary <-  mutate(site_summary, datetime = as.POSIXct(paste0(year, '-', month, '-', day),
+                                                                format = '%Y-%m-%d')) }
   if (type == 'monthly') {
-    subset <-  mutate(subset, datetime = as.POSIXct(paste0(year, '-', month,'-01'),
+    site_summary <-  mutate(site_summary, datetime = as.POSIXct(paste0(year, '-', month,'-01'),
                                                     format = '%Y-%m-%d')) }
-  
+  if (type == 'annual') {
+    site_summary <-  mutate(site_summary, datetime = as.POSIXct(paste0(year, '-01-01'),
+                                                                format = '%Y-%m-%d')) }
   # Graph single store
   # store is identifying part of location, does not have to match whole string
   if(store != FALSE) {
     message('Graphing single store')
-    subset <- filter(subset, grepl(store, location))
     line_alpha <- 1
     fill_alpha <- 0.2
     graph_title <- subset$location[1]
@@ -624,12 +619,15 @@ graph_summary <- function(envdata, title = FALSE,
     graph_title <- paste('All stores at', subset$site[1])
   }
   if(title != FALSE) { graph_title <- title }
+
+  graph_subtitle <-  paste(str_remove(dmy_style(min(subset$datetime)), '^0'),
+  'to',str_remove(dmy_style(max(subset$datetime)), '^0'))
   
   #Create graph ----
   # with time on x axis, temperature on left y axis, and RH on right y axis
   #Y scales 0-40º and 0-100%
   #Dotted lines indicate PD5454 storage guidelines
-  return(subset %>% ggplot(mapping = aes(x = datetime, group = location)) +
+  return(site_summary %>% ggplot(mapping = aes(x = datetime, group = location)) +
            geom_hline(
              yintercept = minmax[1],
              color = 'red',
@@ -725,8 +723,8 @@ graph_light <- function(envdata, title = FALSE,
   if(title != FALSE) { graph_title <- title }
   
   
-  graph_subtitle <- paste(dmy_style(min(subset$datetime)),'to',
-                          dmy_style(max(subset$datetime)))
+  graph_subtitle <- paste(str_remove(dmy_style(subset$start_period[1]), '^0'),
+                          'to',str_remove(dmy_style(subset$end_period[1]), '^0'))
   
   #Create graph ----
   # with time on x axis, light on left y axis, and UV on right y axis
@@ -849,58 +847,57 @@ graph_compliance <- function(envdata, o_t_r = 'o', standard = 'BS 4971',
   # Get rating data
   rated <- compliance(envdata, exclude_stores, start_date, end_date, standard, 
                       min_temp, max_temp, min_RH, max_RH)
-  # Set the date format
-  date_style <- stamp('March 2020', orders = 'BY')
   # Check what kind of graph it should be and set the search term
   grep_str <- switch(o_t_r,
                      'o' = 'standard',
                      't' = 'temp',
                      'r' = 'RH')
   # Filter the rating data for the relevant rows
-  subset <-  filter(rated, grepl(grep_str, rated$rating)) %>%
-    filter(!grepl(exclude_stores, location))
+  rated <-  filter(rated, grepl(grep_str, rated$rating))
+  if (o_t_r == 't' || o_t_r == 'r') {
+    rated <- filter(rated, !grepl('mean', rated$rating))
+  }
   # Assign the minimum and maximum by standard or manually 
-  # (supports BS 4971, PAS 198 25 or PAS 198 30 depending on upper bound)
+  # (supports BS 4971, PAS 198, Icon, and Bizot)
   minmax <- set_minmax(standard, min_temp, max_temp, min_RH, max_RH)
   # Check for title
   if (title == FALSE) {
-    title <- subset$site[1]
+    graph_title <- paste(subset$site[1], standard, 'compliance')
   }
   
   # Assign values for the subtitle and legend, and check 
   if (grepl('t', o_t_r, ignore.case = T)) {
     message('Graphing temperature compliance')
-    subt <- paste('Temperature rating',date_style(subset$start_period[1]),
-                  'to',date_style(subset$end_period[1]))
+    graph_subtitle <- paste('Temperature rating',str_remove(dmy_style(min(subset$datetime)), '^0'),
+                  'to',str_remove(dmy_style(max(subset$datetime)), '^0'))
     high <- paste0('Above ', minmax[2],'C')
     low <- paste0('Below ', minmax[1],'C')
   }
   if (grepl('r', o_t_r, ignore.case = T)) {
     message('Graphing RH compliance')
-    subt <- paste('RH rating',date_style(subset$start_period[1]),
-                  'to',date_style(subset$end_period[1]))
+    graph_subtitle <- paste('RH rating',str_remove(dmy_style(min(subset$datetime)), '^0'),
+                            'to',str_remove(dmy_style(max(subset$datetime)), '^0'))
     high <- paste0('Above ', minmax[4],'%')
     low <- paste0('Below ', minmax[3],'%')
   }
   if (grepl('o', o_t_r, ignore.case = T)) {
     message('Graphing overall compliance')
-    standard <- str_remove(standard, ' 25| 30')
-    subt <- paste(standard, 'compliance', 
-                  date_style(min(subset$start_period)),
-                  'to', date_style(max(subset$end_period)))
+    graph_subtitle <- paste(standard, 'compliance', 
+                            str_remove(dmy_style(min(subset$datetime)), '^0'),
+                            'to',str_remove(dmy_style(max(subset$datetime)), '^0'))
   }
   
   if(!grepl('o', o_t_r)) {
     message('Creating graph')
-    return(ggplot(subset, aes(
+    return(ggplot(rated, aes(
       x = factor(location,
                  levels = rev(levels(factor(location)))),
       y = value, fill = rating)) +
         geom_col() +
         theme(axis.text.x = element_text(angle = 90)) +
         scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
-        labs(title = title, subtitle = subt,
-             x = 'Store', y = 'Time within range') +
+        labs(title = graph_title, subtitle = graph_subtitle,
+             x = 'Store', y = paste('Time within', standard, 'range')) +
         scale_fill_manual(name = 'Rating',
                           labels = c(high, 'Good', low),
                           values = c('#993322','#669933','#336699')) +
@@ -913,7 +910,7 @@ graph_compliance <- function(envdata, o_t_r = 'o', standard = 'BS 4971',
     # for descending x = reorder(location,value)
     # for alphabetical x = factor(location,
     # levels = rev(levels(factor(location))))
-    return(ggplot(subset, aes(
+    return(ggplot(rated, aes(
       #for alphabetical
       x = factor(location, levels = rev(levels(factor(location)))),
       #for descending
@@ -930,8 +927,8 @@ graph_compliance <- function(envdata, o_t_r = 'o', standard = 'BS 4971',
         scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
         theme(axis.text.x = element_text(angle = 90)) +
         labs(
-          title = title,
-          subtitle = subt,
+          title = graph_title,
+          subtitle = graph_subtitle,
           fill = 'Percent',
           x = 'Store',
           y = paste0('Time within ', standard, ' range')
@@ -941,45 +938,43 @@ graph_compliance <- function(envdata, o_t_r = 'o', standard = 'BS 4971',
   }
 }
 
-graph_move <- function(envdata1, envdata2, store1, store2, move_date, start_date, end_date) {
-  
-  premove <- filter(envdata1, grepl(store1, location)) %>%
-    filter(datetime > start_date & datetime < move_date)
-  postmove <- filter(envdata2, grepl(store2, location)) %>%
-    filter(datetime > move_date & datetime < end_date)
+graph_move <- function(envdata1, envdata2, store1, store2, move_date, 
+                       store = FALSE, exclude_stores = FALSE, graph_title = FALSE,
+                       start_date = FALSE, end_date = FALSE, 
+                       date_format = '%m/%Y', breaks = '2 months',
+                       standard = 'BS 4971', min_temp = FALSE, max_temp = FALSE,
+                       min_RH = FALSE, max_RH = FALSE, max_axis_temp = 40, max_axis_RH = 100) {
+
+  premove <- subset_readings(envdata1, start_date = start_date, 
+                             end_date = move_date, store = store1)
+  postmove <- subset_readings(envdata2, start_date = move_date, 
+                              end_date = end_date, store = store2)
   move <- bind_rows(premove, postmove)
   end_date <- max(move$datetime)
-  breaks <- '2 months'
-  min_breaks <- '1 month'
-  date_style <- stamp('2 January 2020', orders = 'dmy')
-  graph_title <- paste(premove$location[1],'to',postmove$location[1])
-  graph_subtitle <- paste0(date_style(start_date),' to ',
-                           date_style(end_date),
+  if(title == FALSE) {   graph_title <- paste(premove$location[1],'to',postmove$location[1])
+  }
+  else { graph_title = title }
+   graph_subtitle <- paste0(str_remove(dmy_style(subset$start_period[1]), '$0'),
+                           'to',str_remove(dmy_style(subset$end_period[1]), '$0'),
                            ', moved ',
-                           date_style(move_date))
-  # Override if necessary, comment out if not
-  #graph_title <- ''
-  #graph_subtitle <- ''
+                           str_remove(dmy_style(move_date), '^0'))
   
   #Create graph with time on x axis, temperature on left y axis, and RH on right y axis
   #Y scales 0-40º and 0-100%
   return(move %>% ggplot(mapping = aes(x = datetime)) + 
-           geom_hline(yintercept = 23, color = 'red', linetype = 'dotted', alpha = 0.8) +
-           geom_hline(yintercept = 13, color = 'red', linetype = 'dotted', alpha = 0.8) +
-           geom_hline(yintercept = 60/2.5, color = 'blue', linetype = 'dotted', alpha = 0.6) +
-           geom_hline(yintercept = 35/2.5, color = 'blue', alpha = 0.6) +
+           geom_hline(yintercept = min_temp, color = 'red', linetype = 'dotted', alpha = 0.8) +
+           geom_hline(yintercept = max_temp, color = 'red', linetype = 'dotted', alpha = 0.8) +
+           geom_hline(yintercept = min_RH / (max_axis_RH / max_axis_temp), color = 'blue', linetype = 'dotted', alpha = 0.6) +
+           geom_hline(yintercept = max_RH / (max_axis_RH / max_axis_temp), color = 'blue', alpha = 0.6) +
            geom_vline(xintercept = as.POSIXct(move_date), color = 'darkgrey') +
            geom_line(aes(y = temp), color = 'red', size = 0.25) +
-           geom_line(aes(y = RH/2.5), color = 'blue', size = 0.25) +
+           geom_line(aes(y = RH/ (max_axis_RH / max_axis_temp)), color = 'blue', size = 0.25) +
            scale_x_datetime(name = 'Date') + 
-           # date_breaks = breaks, 
-           # minor_breaks = min_breaks, 
-           #date_labels = '%m/%Y') +
            labs(title = graph_title, subtitle = graph_subtitle) +
            scale_y_continuous(
              name = 'Temperature (º C)',
-             limits = c(0,40),
-             sec.axis = sec_axis(~ .*2.5, 
+             limits = c(0,max_axis_temp),
+             sec.axis = sec_axis(~ .*(max_axis_RH / max_axis_temp), 
                                  name = 'Rel. Humidity (%)')) +
            theme(axis.title.y.left = element_text(color = 'red'),
                  axis.title.y.right = element_text(color = 'blue')))

@@ -11,20 +11,20 @@ site_short <- 'AL'
 
 # Currently supports 'tinytag', 'rotronic', 'trendbms', 
 # 'tandd', 'miniclima', 'meaco', and 'previous' for csvs generated here.
-# Tinytag and T&D files must be converted to csv before use, but Rotronic xls files can be used directly.
-brand <- 'previous'
+# Tinytag and T&D files must be exported to csv before use, but Rotronic xls files can be used directly.
+brand <- 'tinytag'
 
 # Process data ----
 # Copy the logfiles into dataloggergraphs-main/data, with folders for each brand.
 # Make list of filenames
-filenames <- dir('data/previous', full.names=TRUE)
+filenames <- dir('data/tinytag', full.names=TRUE)
 
 # Get data from files. This runs as a loop for each file.
 datalist <- lapply(filenames, parse_datalogger, site = site, brand = brand)
 
 # Combine the data from the list of files into one dataframe
 # If you have more than one brand of datalogger, use envdata_brand then combine in the next step.
-envdata <- combine_data(datalist)
+envdata_raw <- combine_data(datalist)
 
 # Combine the envdata_brand files
 envdata <- bind_rows(envdata_tinytag, envdata_rotronic) %>%
@@ -32,7 +32,7 @@ envdata <- bind_rows(envdata_tinytag, envdata_rotronic) %>%
 
 # Clean data ----
 # Remove potentially faulty readings. The defaults are 5-35C and 10-80%.
-envadata_clean <- envdata
+envdata_clean <- envdata_raw
 envdata_clean <- remove_faulty(envdata_clean, max_temp = 30, min_temp = 8)
 
 # Subset the readings if you are compiling data for a specific period
@@ -63,11 +63,11 @@ envdata_store_rename$location <- str_replace_all(envdata_store_rename$location, 
 # Default 'monthly', accepts 'annual' and 'daily'
 # Includes the 1st and 99th percentile to trim unusual spikes
 site_summary <- summarise_site(envdata_clean, type = 'daily')
-# Default BS 4971, also accepts 'Icon', and 'PAS 198 25' or 'PAS 198 30' for 25 or 30C max
+# Default BS 4971, also accepts 'Icon', 'PAS 198', and 'Bizot'
 # Or set own parameters
 comp <- compliance(envdata_clean, standard = 'Icon' #,
                    #min_temp = 16, max_temp = 23, min_RH = 40, max_RH = 60
-)
+                   )
 # Summary of light data with percentage of JNF for BW standards
 # Can be limited to exhibition period with start_date and end_date
 light <- light_dose(envdata_clean)
@@ -75,8 +75,8 @@ light <- light_dose(envdata_clean)
 # Write .csv files of all data and tables ----
 # Set standard and site and save
 envdata <- envdata_clean
-standard <- 'BS_4971'
-site_short <- 'GH'
+standard <- 'Icon'
+site_short <- 'AL'
 write_csv(envdata, paste0(date(min(envdata$datetime)),'_to_',
                           date(max(envdata$datetime)), '_data_', 
                           site_short, '.csv'))
@@ -120,12 +120,8 @@ graph_summary(envdata_clean)
 # Rerun this line with a different filename after each generated plot
 ggsave('AA all stores 2025.png', scale = 1.5, width = 150, height = 100, units = 'mm')
 
-# Change the value of 'store' to graph a single store or group of stores sharing a pattern
-# For example '7' graphs 'Archive 7', but 'Arch' graphs all spaces named 'Archive'
-# Include a ^ at the beginning or $ at the end to match a certain part
-# 'E$' will match 'Exhibition Case E' but not 'Exhibition Case B'
-# The default title is the first location in the subset of the data, but can be changed
-graph_light(envdata_exhib, store = 'S', title = 'Exhibition SE & SW cases')
+# Lux and UV graphs, with customizable max_lux and max_UV
+graph_light(envdata_exhib, store = 'Case E', title = 'Exhibition case E')
 
 # Standard compliance graphs, set of three for low/good/high temp and RH and overall
 # Set o_t_r to o for overall, t for temperature, or r for RH
@@ -133,6 +129,8 @@ graph_light(envdata_exhib, store = 'S', title = 'Exhibition SE & SW cases')
 # Set custom max/min or standards 'BS 4971', 'PAS 198 25' or 'PAS 198 30' for max 25 or 30C,
 #   'Icon' [2023 environmental guidance note], and 'Bizot'
 graph_compliance(envdata_clean, o_t_r = 'o',
-                 standard = 'Icon'
-)
-
+                 standard = 'Icon')
+graph_compliance(envdata_clean, o_t_r = 't',
+                 standard = 'Icon')
+graph_compliance(envdata_clean, o_t_r = 'r',
+                 standard = 'Icon')
