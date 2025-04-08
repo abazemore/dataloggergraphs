@@ -13,7 +13,7 @@ parse_datalogger <- function (datafile, site = '', brand = FALSE) {
   if(brand == 'miniclima') { envdata <- parse_miniClima(datafile, site) }
   if(brand == 'meaco') { envdata <- parse_meaco(datafile, site) }
   if(brand == 'previous') { envdata <- parse_previous(datafile, site) }
-  if(!brand %in% c('tinytag', 'rotronic', 'trendbms', 'bms', 'tandd', 'meaco', 'previous')) { message('Brand not identified') }
+  if(!brand %in% c('tinytag', 'rotronic', 'trendbms', 'bms', 'tandd', 'meaco', 'miniprevious')) { message('Brand not identified') }
   return(envdata)
 }
 
@@ -429,7 +429,7 @@ set_minmax <- function(standard = 'BS 4971', min_temp = FALSE, max_temp = FALSE,
   return(c(min_temp, max_temp, min_RH, max_RH))
 }
 
-# BS4971 compliance
+# Standard compliance
 compliance <- function(envdata, exclude_stores = FALSE, 
                        start_date = FALSE, end_date = FALSE,
                        standard = 'BS 4971', min_temp = FALSE, max_temp = FALSE,
@@ -844,9 +844,12 @@ graph_compliance <- function(envdata, o_t_r = 'o', standard = 'BS 4971',
                              start_date = FALSE, end_date = FALSE,
                              min_temp = FALSE, max_temp = FALSE, min_RH = FALSE, max_RH = FALSE) {
   message('Graphing standard compliance')
+  
   # Get rating data
-  rated <- compliance(envdata, exclude_stores, start_date, end_date, standard, 
-                      min_temp, max_temp, min_RH, max_RH)
+  rated <- compliance(envdata, exclude_stores = exclude_stores, 
+                      start_date = start_date, end_date = end_date,
+                      standard = standard, min_temp = min_temp, max_temp = max_temp,
+                      min_RH = min_RH, max_RH = max_RH)
   # Check what kind of graph it should be and set the search term
   grep_str <- switch(o_t_r,
                      'o' = 'standard',
