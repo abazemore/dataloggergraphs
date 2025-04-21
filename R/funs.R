@@ -4,6 +4,19 @@ library(readxl)
 
 
 # Parse files ----
+#' parse_datalogger
+#' 
+#' @description
+#' A central function to use with lapply, to route to the appropriate specific logger extraction function
+#'
+#' @param datafile A logger file, .csv or .xls only for Rotronic.
+#' @param site The site name used for each row as a string.
+#' @param brand The logger brand as a string.
+#' @param model The model as a string for brands that do not include the model in the file. Not required for Tinytag
+#'
+#' @returns envdata, a standard format dataframe to use with other functions
+#'
+#' @examples parse_datalogger('/data/tinytag/2025-01-01_to_2025-02-01.csv', 'Anonymous Library', 'tinytag')
 parse_datalogger <- function (datafile, site = '', brand = FALSE) {
   message('Checking brand')
   if(brand == 'tinytag') { envdata <- parse_tinytag(datafile, site) }
@@ -17,6 +30,14 @@ parse_datalogger <- function (datafile, site = '', brand = FALSE) {
   return(envdata)
 }
 
+#' parse_tinytag
+#'
+#' @param datafile .csv logfile exported from TinyTag Explorer
+#' @param site The site name used for each row, string
+#'
+#' @returns envdata, a dataframe in a standard format used by other functions in this package
+#' 
+#' @noRd
 parse_tinytag <- function(datafile, site = '') {
   message('Parsing as Tinytag')
   file_head <- read_csv(datafile, 
@@ -25,8 +46,8 @@ parse_tinytag <- function(datafile, site = '') {
   envdata <- read_csv(datafile, 
                       col_names = c('id', 'datetime', 'temp', 'RH'),
                       skip = 5) %>%
-    #Add site, location, model, and serial columns extracted from first rows
-    #Model does not work correctly for older files
+    # Add site, location, model, and serial columns extracted from first rows
+    # Model does not work correctly for older files
     mutate(site = as.character(site),
            location = as.character(file_head$temp[4]),
            datetime = as.POSIXct(datetime, tryFormats = c('%Y-%m-%d %H:%M:%S', '%d/%m/%Y %H:%M:%S', '%d/%m/%Y %H:%M')),
@@ -41,25 +62,33 @@ parse_tinytag <- function(datafile, site = '') {
 }
 
 
-parse_rotronic <- function(datafile, site = '') {
+#' Parse Rotronic file
+#'
+#' @param datafile .csv or .xls logfile.
+#' @param site The site name used for each row.
+#' @param model Model of logger, not recoverable from file.
+#'
+#' @returns envdata, a dataframe in a standard format used by other functions in this package
+#' 
+#' @noRd
+parse_rotronic <- function(datafile, site = '', model = 'HL-1D') {
   message('Parsing as Rotronic')
-  # #Extract first few rows containing logger information
-  # if(str_detect(datafile, '.csv$')) {
-  #   file_head <- read_csv(datafile, 
-  #                         col_names = c('date', 'time', 'RH', 'temp'), n_max = 5)
-  #   file_data <- read_csv(datafile, 
-  #                         col_names = c('date', 'time', 'RH', 'temp'),
-  #                         skip = 23)
-  # }
-  # The xls export is actually a tab-seperated values file
-  # if(str_detect(datafile, '.txt|xls$')) {
-  file_head <- head(read_delim(datafile, delim = '\t', col_names = c('date')), 5)
+  # Extract first few rows containing logger information
+  # Check .xls or .csv
+  if(str_detect(datafile, '.xls$')) {
+  file_head <- read_delim(datafile, delim = '\t', col_names = c('date'), 5)
   file_data <- read_delim(datafile, col_names = c('date', 'time', 'RH', 'temp'), delim = '\t', skip = 23)
-  # }
+  }
+  
+  if(str_detect(datafile, '.csv$')) {
+    file_head <- read_csv(datafile, col_names = c('date'), n_max = 5)
+  file_data <- read_csv(datafile, col_names = c('date', 'time', 'RH', 'temp'), skip = 23)
+  }
+  
   # Rest of file is observations
   envdata <-  file_data %>%
     # Add site, location, and serial columns extracted from first rows
-    # Assuming 'Device description' is the name of the logger and normally the location, ours were not set up correctly
+    # Assuming 'Device description' is the name of the logger and normally the location
     # Combine and parse datetime as POSIXct and extract numeric value of temp/RH
     # Model not recoverable
     mutate(site = as.character(site),
@@ -69,13 +98,22 @@ parse_rotronic <- function(datafile, site = '') {
            RH = as.numeric(str_extract_all(RH, '[:digit:]+\\.[:digit:]+')),
            lux = NA,
            UV = NA,
-           model = 'HL-1D',
+           model = model,
            serial = str_remove(file_head$date[5],'Serial Number = '),
            .keep = 'none')
   return(envdata)
 }
 
-parse_trendBMS <- function(datafile, site = '') {
+#' Parse Trend BMS file
+#'
+#' @param datafile .csv logfile.
+#' @param site The site name used for each row.
+#' @param model Model of logger, not recoverable from file.
+#'
+#' @returns envdata, a dataframe in a standard format used by other functions in this package. Temp or RH will be NA.
+#'
+#' @noRd
+parse_trendBMS <- function(datafile, site = '', model = 'Trend BMS') {
   message('Parsing as Trend BMS')
   #Extract first few rows containing logger information
   file_head <- read_csv(datafile,
@@ -102,13 +140,22 @@ parse_trendBMS <- function(datafile, site = '') {
       datetime = parse_datetime(datetime, format = '%d-%b-%y %I:%M %p%*'),
       lux = NA,
       UV = NA,
-      model = 'Trend BMS model unknown',
+      model = model,
       serial = 'Trend BMS serial unknown')
   return(envdata)
 }
 
+#' Parse T&D file
+#'
+#' @param datafile .csv logfile.
+#' @param site The site name used for each row.
+#' @param model Model of logger, not recoverable from file.
+#'
+#' @returns envdata, a dataframe in a standard format used by other functions in this package
+#' 
+#' @noRd
 parse_TandD <- function(datafile, site = '') {
-  message('Parsing as T&D')
+  message('Parsing as T&D', model = 'TR-74Ui')
   #Extract first few rows containing logger information
   file_head <- read_csv(datafile, 
                         col_names = c('datetime', 'time', 'lux', 'UV',
@@ -140,13 +187,22 @@ parse_TandD <- function(datafile, site = '') {
            RH = as.numeric(RH),
            lux = as.numeric(lux),
            UV = as.numeric(UV),
-           model = 'TR-74Ui',
+           model = model,
            serial = as.character(serial),
            .keep = 'none')
   return(envdata)
 }
 
-parse_miniClima <- function(datafile, site = '') {
+#' Parse miniClima file
+#'
+#' @param datafile .csv logfile.
+#' @param site The site name used for each row.
+#' @param model Model of logger, not recoverable from file.
+#'
+#' @returns envdata, a dataframe in a standard format used by other functions in this package
+#' 
+#' @noRd
+parse_miniClima <- function(datafile, site = '', model = 'miniClima EBC') {
   message('Parsing as miniClima')
   # Read observations
   envdata <- read_csv2(datafile,
@@ -164,7 +220,7 @@ parse_miniClima <- function(datafile, site = '') {
   } else if(str_detect(first_line$datetime[1], ' EBC')) {
     info <- first_line$envdata$datetime[1]
   } else { info <- '' }
-  # Extract 
+  # Extract location and serial
   location <- str_extract(info, '[A-Za-z0-9 ]+(?= EBC)') %>%
     str_replace_na('Location unknown')
   serial <- str_extract(info, '(?<= Master ).*?(?= COM)') %>%
@@ -179,13 +235,22 @@ parse_miniClima <- function(datafile, site = '') {
     RH = RH,
     lux = NA,
     UV = NA,
-    model = 'miniClima EBS model unknown',
+    model = model,
     serial = serial,
     .keep = 'none')
   return(envdata)
 }
 
-parse_meaco <- function(datafile, site = '') {
+#' Parse Meaco file
+#'
+#' @param datafile .csv logfile.
+#' @param site The site name used for each row.
+#' @param model Model of logger, not recoverable from file.
+#'
+#' @returns envdata, a dataframe in a standard format used by other functions in this package
+#'
+#' @noRd
+parse_meaco <- function(datafile, site = '', model = 'Meaco') {
   message('Parsing as Meaco')
   # Extract first few rows containing logger information
   file_head <- read_csv(datafile, col_names = FALSE,
@@ -204,8 +269,8 @@ parse_meaco <- function(datafile, site = '') {
         RH = as.numeric(HUMIDITY),
         lux = NA,
         UV = NA,
-        model = 'Meaco model unknown',
-        serial = 'Meaco serial unknown',
+        model = model,
+        serial = 'Serial unknown',
         .keep = 'none')
   }
   else {
@@ -220,25 +285,34 @@ parse_meaco <- function(datafile, site = '') {
         RH = NA,
         lux = as.numeric(LUX),
         UV = as.numeric(UV),
-        model = 'Meaco model unknown',
-        serial = 'Meaco serial unknown',
+        model = model,
+        serial = 'Serial unknown',
         .keep = 'none')
   }
   return(envdata)
 }
 
-parse_previous <- function(datafile, site = '') {
+#' Parse previously processed file
+#'
+#' @param datafile .csv of envdata
+#'
+#' @returns envdata, a dataframe in a standard format used by other functions in this package
+#' 
+#' @noRd
+parse_previous <- function(datafile) {
   message('Parsing as previously processed')
-  envdata <- read_csv(datafile)
-  if (ncol(envdata) == 7) {
-    envdata <- mutate(envdata, datetime = as.POSIXct(datetime),
-                      lux = NA, UV = NA)
-  }
-  envdata <- rename(envdata, site = 1)
+  envdata <- read_csv(datafile) %>%
+    mutate(datetime = as.POSIXct(datetime))
   return(envdata)
 }
 
-# Combine data from lapply list, match separate temperature and humidity files ----
+#' Combine data from lapply list and match separate temperature and humidity files
+#'
+#' @param datalist A list of parsed dataframes
+#'
+#' @returns envdata A dataframe containing all rows in `datalist`, with combined temperature and RH files from Trend
+#' 
+#' @noRd
 combine_data <- function(datalist) {
   message('Combining files')
   # Combine data from each file into one list
@@ -272,6 +346,17 @@ combine_data <- function(datalist) {
 }
 
 # Subset readings ----
+#' Remove potentially faulty readings outside range
+#'
+#' @param envdata A dataframe returned from parse_datalogger
+#' @param min_temp A number for the minimum realistic temperature
+#' @param max_temp A number for the maximum realistic temperature
+#' @param min_RH A number for the minimum realistic RH
+#' @param max_RH A number for the maximum realistic RH
+#'
+#' @returns subset A dataframe with rows out of range removed
+#'
+#' @examples remove_faulty(envdata, max_RH = 70)
 remove_faulty <- function(envdata, min_temp = 5, max_temp = 35,
                           min_RH = 10, max_RH = 80) {
   # Remove readings outside range but keep NA light readings
@@ -303,6 +388,17 @@ subset_readings <- function(envdata, store = FALSE, exclude_stores = FALSE,
 # Summarise -----
 # Summary by location
 
+#' Summarise site
+#'
+#' @param envdata A dataframe returned from parse_datalogger
+#' @param exclude_stores A string or list of stores to exclude from analysis
+#' @param start_date A string to use as minimum date
+#' @param end_date A string to use as maximum date
+#' @param type 'annual', 'monthly', or 'daily'
+#'
+#' @returns site_summary A dataframe of summary statistics
+#'
+#' @examples summarise_site(envdata, start_date = '2024-01-01', type = 'annual')
 summarise_site <- function(envdata, exclude_stores = FALSE, 
                            start_date = FALSE, end_date = FALSE, type = 'monthly') {
   message('Summarising site')
@@ -360,6 +456,16 @@ summarise_site <- function(envdata, exclude_stores = FALSE,
   return(site_summary)
 }
 
+#' Calculate light dose and compare to blue wool standards
+#'
+#' @param envdata A dataframe returned from parse_datalogger
+#' @param start_date A string to use as a minimum date
+#' @param end_date A string to use as a maximum date
+#' @param obs_hour Number of observations logged per hour
+#'
+#' @returns dose A dataframe of the cumulative lux and UV hours with percent to just noticeable fade for BW standards
+#' 
+#' @examples light_dose(envdata_light, obs_hour = 4)
 light_dose <- function(envdata, start_date = FALSE, 
                        end_date = FALSE, obs_hour = 3) {
   subset <- subset_readings(envdata, 
@@ -382,6 +488,16 @@ light_dose <- function(envdata, start_date = FALSE,
   return(dose)
 }
 
+#' Set minimum and maximum temp with standard or custom values
+#'
+#' @param standard Standard ('BS 4971', 'PAS 198', 'Icon', or 'Bizot')
+#' @param min_temp Minimum temperature, overwrites standard if provided
+#' @param max_temp Maximum temperature, overwrites standard if provided
+#' @param min_RH Minimum RH, overwrites standard if provided
+#' @param max_RH Maximum RH, overwrites standard if provided
+#'
+#' @returns minmax A vector of minimum and maximum values for temp and RH
+#' @examples set_minmax(standard = 'PAS 198', max_temp = 25)
 set_minmax <- function(standard = 'BS 4971', min_temp = FALSE, max_temp = FALSE,
                        min_RH = FALSE, max_RH = FALSE) {
   # Set min and max if not provided
@@ -429,7 +545,20 @@ set_minmax <- function(standard = 'BS 4971', min_temp = FALSE, max_temp = FALSE,
   return(c(min_temp, max_temp, min_RH, max_RH))
 }
 
-# Standard compliance
+#' Calculate standard compliance for each area
+#'
+#' @param envdata A dataframe returned from parse_datalogger.
+#' @param start_date A string to use as a minimum date.
+#' @param end_date A string to use as a maximum date.
+#' @param standard Standard ('BS 4971', 'PAS 198', 'Icon', or 'Bizot').
+#' @param min_temp Minimum temperature, overwrites standard if provided.
+#' @param max_temp Maximum temperature, overwrites standard if provided.
+#' @param min_RH Minimum RH, overwrites standard if provided.
+#' @param max_RH Maximum RH, overwrites standard if provided.
+#'
+#' @returns rated A dataframe with overall standard compliance, percentage of time above and below, and mean temp and RH.
+#' 
+#' @examples compliance(envdata, standard = 'Icon')
 compliance <- function(envdata, exclude_stores = FALSE, 
                        start_date = FALSE, end_date = FALSE,
                        standard = 'BS 4971', min_temp = FALSE, max_temp = FALSE,
@@ -487,9 +616,33 @@ compliance <- function(envdata, exclude_stores = FALSE,
 
 # Graph ----
 dmy_style <- stamp('1 March 2021', orders = '%0d %B %Y')
-graph_store <- function(envdata, title = FALSE,
-                        store = FALSE, exclude_stores = FALSE, graph_title = FALSE,
-                        start_date = FALSE, end_date = FALSE, 
+
+#' Graph temperature and RH for single or multiple stores
+#'
+#' @param envdata A dataframe returned from parse_datalogger.
+#' @param store A string matching a single store or a group of stores with a matching pattern.
+#' @param exclude_stores A string or vector to exclude a group of stores.
+#' @param graph_title Title of graph, else 'All stores at site' or first location if `store` specified.
+#' @param start_date A string to use as minimum date.
+#' @param end_date A string to use as maximum date.
+#' @param date_format Format of dates on x axis, like '%d/%m'.
+#' @param breaks Breaks on x axis, like '2 weeks'.
+#' @param standard Standard to use for temp/RH guidelines.
+#' @param min_temp Minimum temperature guideline.
+#' @param max_temp Maximum temperature guideline.
+#' @param min_RH Minimum RH guideline.
+#' @param max_RH Maximum RH guideline.
+#' @param max_axis_temp Maximum of temperature axis.
+#' @param max_axis_RH Maximum of RH axis.
+#' @param col_temp Colour for temperature line, as named HTML colour or hex.
+#' @param col_RH Colour for RH line, as named HTML colour or hex.
+#'
+#' @returns ggplot2 Object containing temperature and RH graph.
+#' 
+#' @examples graph_store(envdata_exhib, graph_title = 'Exhibition cases')
+graph_store <- function(envdata, store = FALSE, exclude_stores = FALSE,
+                        graph_title = FALSE,
+                        start_date = FALSE, end_date = FALSE,
                         date_format = '%m/%Y', breaks = '2 months',
                         standard = 'BS 4971', min_temp = FALSE, max_temp = FALSE,
                         min_RH = FALSE, max_RH = FALSE, max_axis_temp = 40, max_axis_RH = 100,
@@ -506,16 +659,19 @@ graph_store <- function(envdata, title = FALSE,
   if(store != FALSE) {
     message('Graphing single store')
     line_alpha <- 1
+    if(graph_title == FALSE) {
     graph_title <- subset$location[1]
+    }
   }
   
   if(store == FALSE) {
     message('Graphing all stores')
     line_alpha <- 0.5
+    if(graph_title == FALSE) {
     graph_title <- paste('All stores at', subset$site[1])
+    }
   }
   
-  if(title != FALSE) { graph_title <- title }
   graph_subtitle <- paste(str_remove(dmy_style(min(subset$datetime)), '^0'),'to',
                           str_remove(dmy_style(max(subset$datetime)), '^0'))
   
@@ -574,6 +730,30 @@ graph_store <- function(envdata, title = FALSE,
 }
 
 # Graph max/min/mean summary ----
+#' Graph temperature and RH summary for single or multiple stores
+#'
+#' @param envdata A dataframe returned from parse_datalogger.
+#' @param type 'annual', 'monthly', or 'daily'
+#' @param store A string matching a single store or a group of stores with a matching pattern.
+#' @param exclude_stores A string or vector to exclude a group of stores.
+#' @param graph_title Title of graph, else 'All stores at site' or first location if `store` specified.
+#' @param start_date A string to use as minimum date.
+#' @param end_date A string to use as maximum date.
+#' @param date_format Format of dates on x axis, like '%d/%m'.
+#' @param breaks Breaks on x axis, like '2 weeks'.
+#' @param standard Standard to use for temp/RH guidelines.
+#' @param min_temp Minimum temperature guideline.
+#' @param max_temp Maximum temperature guideline.
+#' @param min_RH Minimum RH guideline.
+#' @param max_RH Maximum RH guideline.
+#' @param max_axis_temp Maximum of temperature axis.
+#' @param max_axis_RH Maximum of RH axis.
+#' @param col_temp Colour for temperature line, as named HTML colour or hex.
+#' @param col_RH Colour for RH line, as named HTML colour or hex.
+#'
+#' @returns ggplot2 Object containing temperature and RH graph with mean line and min/max ribbons
+#' 
+#' @examples graph_summary(envdata_exhib, graph_title = 'Exhibition cases', type = 'daily')
 graph_summary <- function(envdata, title = FALSE,
                           type = 'monthly',
                           store = FALSE, exclude_stores = FALSE,
@@ -694,11 +874,30 @@ graph_summary <- function(envdata, title = FALSE,
 }
 
 # Graph light ----
-graph_light <- function(envdata, title = FALSE,
-                        store = FALSE, exclude_stores = FALSE,
+#' Graph light data
+#'
+#' @param envdata A dataframe returned from parse_datalogger.
+#' @param store A string matching a single store or a group of stores with a matching pattern.
+#' @param exclude_stores A string or vector to exclude a group of stores.
+#' @param graph_title Title of graph, else 'All stores at site' or first location if `store` specified.
+#' @param start_date A string to use as minimum date.
+#' @param end_date A string to use as maximum date.
+#' @param breaks Breaks on x axis, like '2 weeks'.
+#' @param date_format Format of dates on x axis, like '%d/%m' or '12/24'.
+#' @param max_lux Value of maximum lux guideline.
+#' @param max_UV Value of maximum UV guideline
+#' @param col_lux Colour for visible light line, as named HTML colour or hex.
+#' @param col_UV Colour for UV line, as named HTML colour or hex.
+#'
+#' @returns ggplot2 Object containing visible light and UV graph
+#' 
+#' @examples graph_light(envdata_exhib, graph_title = 'Exhibition cases')
+graph_light <- function(envdata, store = FALSE, exclude_stores = FALSE,
+                        graph_title = FALSE,
                         start_date = FALSE, end_date = FALSE,
-                        breaks = '2 months', date_format = '12/25',
-                        max_lux = 50, col_lux = 'darkgreen', col_UV = 'darkorange') {
+                        breaks = '2 months', date_format = '%m/%y',
+                        max_lux = 50, max_UV = 0,
+                        col_lux = 'darkgreen', col_UV = 'darkorange') {
   message('Graphing lux/UV')
   subset <- subset_readings(envdata, store = store, exclude_stores = exclude_stores,
                             start_date = start_date, end_date = end_date) %>%
@@ -712,18 +911,19 @@ graph_light <- function(envdata, title = FALSE,
   if(store != FALSE) {
     message('Graphing single store')
     line_alpha <- 1
+    if(graph_title == FALSE) {
     graph_title <- subset$location[1]
+    }
   }
   
   # Graph all stores ----
   if(store == FALSE) {
     message('Graphing all stores')
     line_alpha <- 0.5
+    if(graph_title == FALSE) {
     graph_title <- paste('All stores at', subset$site[1])
+    }
   }
-  
-  if(title != FALSE) { graph_title <- title }
-  
   
   graph_subtitle <- paste(str_remove(dmy_style(subset$start_period[1]), '^0'),
                           'to',str_remove(dmy_style(subset$end_period[1]), '^0'))
@@ -735,6 +935,12 @@ graph_light <- function(envdata, title = FALSE,
            geom_hline(
              yintercept = max_lux,
              color = col_lux,
+             linetype = 'dotted',
+             alpha = 0.8
+           ) +
+           geom_hline(
+             yintercept = max_UV,
+             color = col_UV,
              linetype = 'dotted',
              alpha = 0.8
            ) +
@@ -751,22 +957,41 @@ graph_light <- function(envdata, title = FALSE,
                             date_labels = date_format) +
            labs(title = graph_title, subtitle = graph_subtitle) +
            scale_y_continuous(
-             name = 'Visible light (lux, green)',
-             sec.axis = sec_axis( ~ . / max(subset$lux), name = 'UV (μW/lumen, orange)')) +
+             name = 'Visible light (lux)',
+             sec.axis = sec_axis( ~ . / max(subset$lux), name = 'UV (μW/lumen)')) +
            theme(axis.title.y.left = element_text(color = col_lux),
                  axis.title.y.right = element_text(color = col_UV))
   )
 }
 
-# Graph max/min/mean summary ----
-graph_light_summary <- function(light_summary, title = FALSE,
+#' Graph light data summary
+#'
+#' @param envdata A dataframe returned from parse_datalogger.
+#' @param type 'annual', 'monthly', or 'daily'
+#' @param store A string matching a single store or a group of stores with a matching pattern.
+#' @param exclude_stores A string or vector to exclude a group of stores.
+#' @param graph_title Title of graph, else 'All stores at site' or first location if `store` specified.
+#' @param start_date A string to use as minimum date.
+#' @param end_date A string to use as maximum date.
+#' @param date_format Format of dates on x axis, like '%d/%m' or '12/24'.
+#' @param breaks Breaks on x axis, like '2 weeks'.
+#' @param max_lux Value of maximum lux guideline.
+#' @param max_UV Value of maximum UV guideline
+#' @param col_lux Colour for visible light line and ribbon, as named HTML colour or hex.
+#' @param col_UV Colour for UV line and ribbon, as named HTML colour or hex.
+#'
+#' @returns ggplot2 Object containing visible light and UV graph with mean and min/max ribbons
+#' 
+#' @examples graph_light_summary(envdata_exhib, graph_title = 'Exhibition cases', type = 'daily')
+graph_light_summary <- function(envdata, title = FALSE,
                                 store = FALSE, exclude_stores = FALSE,
                                 start_date = FALSE, end_date = FALSE,
                                 type = 'monthly',
                                 breaks = '2 months', date_format = '%m/%Y',
-                                max_lux = 50) {
+                                max_lux = 50, max_UV = 0,
+                                col_lux = 'darkgreen', col_UV = 'darkorange') {
   message('Graphing max/min/mean')
-  subset <- subset_readings(light_summary, store = store, exclude_stores = exclude_stores,
+  subset <- subset_readings(envdata, store = store, exclude_stores = exclude_stores,
                             start_date = start_date, end_date = end_date)
   if (type == 'monthly') {
     subset <-  mutate(subset, datetime = as.POSIXct(paste0(year, '-', month,'-01'),
@@ -833,16 +1058,38 @@ graph_light_summary <- function(light_summary, title = FALSE,
                             date_labels = date_format) +
            labs(title = graph_title, subtitle = graph_subtitle) +
            scale_y_continuous(
-             name = 'Visible light (lux, green)',
-             sec.axis = sec_axis(name = 'UV (μW/lumen, orange)')
+             name = 'Visible light (lux)',
+             sec.axis = sec_axis(name = 'UV (μW/lumen)')
            ) +
            theme(axis.title.y.left = element_text(color = col_lux),
                  axis.title.y.right = element_text(color = col_UV)))
 }
 
-# Graph standard compliance ----
+#' Graph standard compliance
+#'
+#' @param envdata A dataframe returned from parse_datalogger
+#' @param o_t_r 'o' for overall graph, 't' for temperature, or 'r' for RH.
+#' @param standard A string for graph titles and to set minimum and maximum values if recognised.
+#' @param exclude_stores A string or vector to exclude a group of stores.
+#' @param graph_title Title of graph, else 'All stores at site' or first location if `store` specified.
+#' @param start_date A string to use as minimum date.
+#' @param end_date A string to use as maximum date.
+#' @param min_temp Minimum temperature guideline.
+#' @param max_temp Maximum temperature guideline.
+#' @param min_RH Minimum RH guideline.
+#' @param max_RH Maximum RH guideline.
+#' @param col_low Colour of low bar for temp or RH graph, as named HTML colour or hex.
+#' @param col_good Colour of good bar for temp or RH graph, as named HTML colour or hex.
+#' @param col_high Colour of high bar for temp or RH graph, as named HTML colour or hex.
+#' @param grad_bad Colour of low end of gradient for overall graph, as named HTML colour or hex.
+#' @param grad_mid Colour of midpoint of gradient for overall graph, as named HTML colour or hex.
+#' @param grad_good Colour of high end of gradient for overall graph, as named HTML colour or hex.
+#'
+#' @returns ggplot2 Object containing bar graph of overall or temp/RH rating for each space in dataframe
+#' 
+#' @examples graph_compliance(envdata, 't', standard = 'Icon')
 graph_compliance <- function(envdata, o_t_r = 'o', standard = 'BS 4971',
-                             exclude_stores = FALSE, descending = FALSE, title = FALSE,
+                             exclude_stores = FALSE, graph_title = FALSE,
                              start_date = FALSE, end_date = FALSE,
                              min_temp = FALSE, max_temp = FALSE, min_RH = FALSE, max_RH = FALSE,
                              col_low = '#336699', col_good = '#669933', col_high = '#993322',
@@ -945,8 +1192,34 @@ graph_compliance <- function(envdata, o_t_r = 'o', standard = 'BS 4971',
   }
 }
 
-graph_move <- function(envdata1, envdata2, store1, store2, move_date, 
-                       store = FALSE, exclude_stores = FALSE, graph_title = FALSE,
+#' Splice temp and RH graph on specified date
+#'
+#' @param envdata1 Dataframe returned from parse_datalogger for left of graph
+#' @param envdata2 Dataframe returned from parse_datalogger for right of graph
+#' @param store1 String to search location in envdata1
+#' @param store2 String to search location in envdata2
+#' @param move_date Date to splice data
+#' @param graph_title Title of graph, otherwise 'Store 1 to Store 2'.
+#' @param start_date A string to use as minimum date.
+#' @param end_date A string to use as maximum date.
+#' @param date_format Format of dates on x axis, like '%d/%m'.
+#' @param breaks Breaks on x axis, like '2 weeks'.
+#' @param standard Standard to use for temp/RH guidelines.
+#' @param min_temp Minimum temperature guideline.
+#' @param max_temp Maximum temperature guideline.
+#' @param min_RH Minimum RH guideline.
+#' @param max_RH Maximum RH guideline.
+#' @param max_axis_temp Maximum of temperature axis.
+#' @param max_axis_RH Maximum of RH axis.
+#' @param col_temp Colour for temperature line, as named HTML colour or hex.
+#' @param col_RH Colour for RH line, as named HTML colour or hex.
+#' @param col_line Colour for vertical line at splice date
+#'
+#' @returns ggplot2 Object containing temp and RH graph of two sets of data spliced on `move_date`.
+#' 
+#' @examples graph_move(envdata_old, envdata_new, store1 = 'Archive 1', store2 = 'Archive A', move_date = '2025-01-01')
+graph_move <- function(envdata1, envdata2, store1, store2, move_date,
+                       graph_title = FALSE,
                        start_date = FALSE, end_date = FALSE, 
                        date_format = '%m/%Y', breaks = '2 months',
                        standard = 'BS 4971', min_temp = FALSE, max_temp = FALSE,
@@ -959,9 +1232,8 @@ graph_move <- function(envdata1, envdata2, store1, store2, move_date,
                               end_date = end_date, store = store2)
   move <- bind_rows(premove, postmove)
   end_date <- max(move$datetime)
-  if(title == FALSE) {   graph_title <- paste(premove$location[1],'to',postmove$location[1])
+  if(graph_title == FALSE) {   graph_title <- paste(premove$location[1],'to',postmove$location[1])
   }
-  else { graph_title = title }
    graph_subtitle <- paste0(str_remove(dmy_style(subset$start_period[1]), '$0'),
                            'to',str_remove(dmy_style(subset$end_period[1]), '$0'),
                            ', moved ',
