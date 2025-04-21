@@ -492,7 +492,8 @@ graph_store <- function(envdata, title = FALSE,
                         start_date = FALSE, end_date = FALSE, 
                         date_format = '%m/%Y', breaks = '2 months',
                         standard = 'BS 4971', min_temp = FALSE, max_temp = FALSE,
-                        min_RH = FALSE, max_RH = FALSE, max_axis_temp = 40, max_axis_RH = 100) {
+                        min_RH = FALSE, max_RH = FALSE, max_axis_temp = 40, max_axis_RH = 100,
+                        col_temp = 'red', col_RH = 'blue') {
   message('Graphing T&RH')
   subset <- subset_readings(envdata, store = store, exclude_stores = exclude_stores,
                             start_date = start_date, end_date = end_date)
@@ -525,35 +526,35 @@ graph_store <- function(envdata, title = FALSE,
   return(subset %>% ggplot(mapping = aes(x = datetime, group = location)) +
            geom_hline(
              yintercept = minmax[1],
-             color = 'red',
+             color = col_temp,
              linetype = 'dotted',
              alpha = 0.8
            ) +
            geom_hline(
              yintercept = minmax[2],
-             color = 'red',
+             color = col_temp,
              linetype = 'dotted',
              alpha = 0.8
            ) +
            geom_hline(
              yintercept = minmax[3] / 2.5,
-             color = 'blue',
+             color = col_RH,
              linetype = 'dotted',
              alpha = 0.6
            ) +
            geom_hline(
              yintercept = minmax[4] / 2.5,
-             color = 'blue',
+             color = col_RH,
              linetype = 'dotted',
              alpha = 0.6
            ) +
            geom_line(aes(y = temp),
-                     color = 'red',
+                     color = col_temp,
                      size = 0.25,
                      #linetype = linetype,
                      alpha = line_alpha) +
            geom_line(aes(y = RH / (max_axis_RH / max_axis_temp)),
-                     color = 'blue',
+                     color = col_RH,
                      size = 0.25,
                      #linetype = linetype,
                      alpha = line_alpha) +
@@ -567,8 +568,8 @@ graph_store <- function(envdata, title = FALSE,
              sec.axis = sec_axis( ~ . * (max_axis_RH / max_axis_temp),
                                   name = 'Rel. Humidity (%, blue)',
                                   breaks = c(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100))) +
-           theme(axis.title.y.left = element_text(color = 'red'),
-                 axis.title.y.right = element_text(color = 'blue'))
+           theme(axis.title.y.left = element_text(color = col_temp),
+                 axis.title.y.right = element_text(color = col_RH))
   )
 }
 
@@ -580,7 +581,8 @@ graph_summary <- function(envdata, title = FALSE,
                           date_format = '%m/%y', breaks = '2 months',
                           standard = 'BS 4971', min_temp = FALSE, max_temp = FALSE,
                           min_RH = FALSE, max_RH = FALSE,
-                          max_axis_temp = 40, max_axis_RH = 100) {
+                          max_axis_temp = 40, max_axis_RH = 100,
+                          col_temp = 'red', col_RH = 'blue') {
   message('Graphing max/min/mean')
   # Set min/max by standard where not specified
   minmax <- set_minmax(standard, min_temp, max_temp, min_RH, max_RH)
@@ -630,50 +632,50 @@ graph_summary <- function(envdata, title = FALSE,
   return(site_summary %>% ggplot(mapping = aes(x = datetime, group = location)) +
            geom_hline(
              yintercept = minmax[1],
-             color = 'red',
+             color = col_temp,
              linetype = 'dotted',
              alpha = 0.8
            ) +
            geom_hline(
              yintercept = minmax[2],
-             color = 'red',
+             color = col_temp,
              linetype = 'dotted',
              alpha = 0.8
            ) +
            geom_hline(
              yintercept = minmax[3] / (max_axis_RH / max_axis_temp),
-             color = 'blue',
+             color = col_RH,
              linetype = 'dotted',
              alpha = 0.6
            ) +
            geom_hline(
              yintercept = minmax[4] / (max_axis_RH / max_axis_temp),
-             color = 'blue',
+             color = col_RH,
              linetype = 'dotted',
              alpha = 0.6
            ) +
            geom_line(aes(y = mean_temp),
-                     color = 'red',
+                     color = col_temp,
                      size = 0.25,
                      alpha = line_alpha) +
            geom_ribbon(aes(ymin = min_temp, ymax = max_temp),
-                       fill = 'red',
+                       fill = col_temp,
                        size = 0.25,
                        alpha = 0.1) +
            geom_ribbon(aes(ymin = p01_RH, ymax = p99_RH),
-                       fill = 'red',
+                       fill = col_temp,
                        size = 0.25,
                        alpha = 0.1) +
            geom_line(aes(y = mean_RH / (max_axis_RH / max_axis_temp)),
-                     color = 'blue',
+                     color = col_RH,
                      size = 0.25,
                      alpha = line_alpha) +
            geom_ribbon(aes(ymin = min_RH, ymax = max_RH),
-                       fill = 'blue',
+                       fill = col_RH,
                        size = 0.25,
                        alpha = 0.1) +
            geom_ribbon(aes(ymin = p01_RH, ymax = p99_RH),
-                       fill = 'blue',
+                       fill = col_RH,
                        size = 0.25,
                        alpha = 0.1) +
            scale_x_datetime(name = 'Date',
@@ -687,8 +689,8 @@ graph_summary <- function(envdata, title = FALSE,
                                   name = 'Rel. Humidity (%)',
                                   breaks = c(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100))
            ) +
-           theme(axis.title.y.left = element_text(color = 'red'),
-                 axis.title.y.right = element_text(color = 'blue')))
+           theme(axis.title.y.left = element_text(color = col_temp),
+                 axis.title.y.right = element_text(color = col_RH)))
 }
 
 # Graph light ----
@@ -696,7 +698,7 @@ graph_light <- function(envdata, title = FALSE,
                         store = FALSE, exclude_stores = FALSE,
                         start_date = FALSE, end_date = FALSE,
                         breaks = '2 months', date_format = '12/25',
-                        max_lux = 50) {
+                        max_lux = 50, col_lux = 'darkgreen', col_UV = 'darkorange') {
   message('Graphing lux/UV')
   subset <- subset_readings(envdata, store = store, exclude_stores = exclude_stores,
                             start_date = start_date, end_date = end_date) %>%
@@ -732,16 +734,16 @@ graph_light <- function(envdata, title = FALSE,
   return(subset %>% ggplot(mapping = aes(x = datetime, group = location)) +
            geom_hline(
              yintercept = max_lux,
-             color = 'darkgreen',
+             color = col_lux,
              linetype = 'dotted',
              alpha = 0.8
            ) +
            geom_line(aes(y = lux),
-                     color = 'darkgreen',
+                     color = col_lux,
                      size = 0.25,
                      alpha = line_alpha) +
            geom_line(aes(y = UV / 2.5),
-                     color = 'darkorange',
+                     color = col_UV,
                      size = 0.25,
                      alpha = line_alpha) +
            scale_x_datetime(name = 'Date',
@@ -751,8 +753,8 @@ graph_light <- function(envdata, title = FALSE,
            scale_y_continuous(
              name = 'Visible light (lux, green)',
              sec.axis = sec_axis( ~ . / max(subset$lux), name = 'UV (μW/lumen, orange)')) +
-           theme(axis.title.y.left = element_text(color = 'darkgreen'),
-                 axis.title.y.right = element_text(color = 'darkorange'))
+           theme(axis.title.y.left = element_text(color = col_lux),
+                 axis.title.y.right = element_text(color = col_UV))
   )
 }
 
@@ -798,32 +800,32 @@ graph_light_summary <- function(light_summary, title = FALSE,
   return(subset %>% ggplot(mapping = aes(x = datetime, group = location)) +
            geom_hline(
              yintercept = max_lux,
-             color = 'darkgreen',
+             color = col_lux,
              linetype = 'dotted',
              alpha = 0.8
            ) +
            geom_line(aes(y = mean_lux),
-                     color = 'darkgreen',
+                     color = col_lux,
                      size = 0.25,
                      alpha = line_alpha) +
            geom_ribbon(aes(ymin = min_lux, ymax = max_lux),
-                       fill = 'darkgreen',
+                       fill = col_lux,
                        size = 0.25,
                        alpha = 0.2) +
            geom_ribbon(aes(ymin = p01_lux, ymax = p99_lux),
-                       fill = 'darkgreen',
+                       fill = col_lux,
                        size = 0.25,
                        alpha = 0.1) +
            geom_line(aes(y = mean_UV / 2.5),
-                     color = 'darkorange',
+                     color = col_UV,
                      size = 0.25,
                      alpha = line_alpha) +
            geom_ribbon(aes(ymin = min_UV, ymax = max_UV),
-                       fill = 'darkorange',
+                       fill = col_UV,
                        size = 0.25,
                        alpha = 0.1) +
            geom_ribbon(aes(ymin = p01_UV, ymax = p99_UV),
-                       fill = 'darkorange',
+                       fill = col_UV,
                        size = 0.25,
                        alpha = 0.1) +
            scale_x_datetime(name = 'Date',
@@ -834,15 +836,17 @@ graph_light_summary <- function(light_summary, title = FALSE,
              name = 'Visible light (lux, green)',
              sec.axis = sec_axis(name = 'UV (μW/lumen, orange)')
            ) +
-           theme(axis.title.y.left = element_text(color = 'darkgreen'),
-                 axis.title.y.right = element_text(color = 'darkorange')))
+           theme(axis.title.y.left = element_text(color = col_lux),
+                 axis.title.y.right = element_text(color = col_UV)))
 }
 
 # Graph standard compliance ----
 graph_compliance <- function(envdata, o_t_r = 'o', standard = 'BS 4971',
                              exclude_stores = FALSE, descending = FALSE, title = FALSE,
                              start_date = FALSE, end_date = FALSE,
-                             min_temp = FALSE, max_temp = FALSE, min_RH = FALSE, max_RH = FALSE) {
+                             min_temp = FALSE, max_temp = FALSE, min_RH = FALSE, max_RH = FALSE,
+                             col_low = '#336699', col_good = '#669933', col_high = '#993322',
+                             grad_bad = '#990000', grad_mid = '#CC6600', grad_good = '#006600') {
   message('Graphing standard compliance')
   
   # Get rating data
@@ -903,7 +907,7 @@ graph_compliance <- function(envdata, o_t_r = 'o', standard = 'BS 4971',
              x = 'Store', y = paste('Time within', standard, 'range')) +
         scale_fill_manual(name = 'Rating',
                           labels = c(high, 'Good', low),
-                          values = c('#993322','#669933','#336699')) +
+                          values = c(col_high, col_good, col_low)) +
         coord_flip() )
   }
   
@@ -921,9 +925,9 @@ graph_compliance <- function(envdata, o_t_r = 'o', standard = 'BS 4971',
       y = value)) +
         geom_col(aes(fill = value)) +
         scale_fill_gradient2(
-          low = '#990000',
-          mid = '#CC6600',
-          high = '#006600',
+          low = grad_bad,
+          mid = grad_mid,
+          high = grad_good,
           midpoint = .5,
           limits = c(0, 1),
           labels = scales::label_percent()) +
@@ -946,7 +950,8 @@ graph_move <- function(envdata1, envdata2, store1, store2, move_date,
                        start_date = FALSE, end_date = FALSE, 
                        date_format = '%m/%Y', breaks = '2 months',
                        standard = 'BS 4971', min_temp = FALSE, max_temp = FALSE,
-                       min_RH = FALSE, max_RH = FALSE, max_axis_temp = 40, max_axis_RH = 100) {
+                       min_RH = FALSE, max_RH = FALSE, max_axis_temp = 40, max_axis_RH = 100,
+                       col_temp = 'red', col_RH = 'blue', col_line = 'darkgrey') {
 
   premove <- subset_readings(envdata1, start_date = start_date, 
                              end_date = move_date, store = store1)
@@ -965,13 +970,13 @@ graph_move <- function(envdata1, envdata2, store1, store2, move_date,
   #Create graph with time on x axis, temperature on left y axis, and RH on right y axis
   #Y scales 0-40º and 0-100%
   return(move %>% ggplot(mapping = aes(x = datetime)) + 
-           geom_hline(yintercept = min_temp, color = 'red', linetype = 'dotted', alpha = 0.8) +
-           geom_hline(yintercept = max_temp, color = 'red', linetype = 'dotted', alpha = 0.8) +
-           geom_hline(yintercept = min_RH / (max_axis_RH / max_axis_temp), color = 'blue', linetype = 'dotted', alpha = 0.6) +
-           geom_hline(yintercept = max_RH / (max_axis_RH / max_axis_temp), color = 'blue', alpha = 0.6) +
-           geom_vline(xintercept = as.POSIXct(move_date), color = 'darkgrey') +
-           geom_line(aes(y = temp), color = 'red', size = 0.25) +
-           geom_line(aes(y = RH/ (max_axis_RH / max_axis_temp)), color = 'blue', size = 0.25) +
+           geom_hline(yintercept = min_temp, color = col_temp, linetype = 'dotted', alpha = 0.8) +
+           geom_hline(yintercept = max_temp, color = col_temp, linetype = 'dotted', alpha = 0.8) +
+           geom_hline(yintercept = min_RH / (max_axis_RH / max_axis_temp), color = col_RH, linetype = 'dotted', alpha = 0.6) +
+           geom_hline(yintercept = max_RH / (max_axis_RH / max_axis_temp), color = col_RH, alpha = 0.6) +
+           geom_vline(xintercept = as.POSIXct(move_date), color = col_line) +
+           geom_line(aes(y = temp), color = col_temp, size = 0.25) +
+           geom_line(aes(y = RH/ (max_axis_RH / max_axis_temp)), color = col_RH, size = 0.25) +
            scale_x_datetime(name = 'Date') + 
            labs(title = graph_title, subtitle = graph_subtitle) +
            scale_y_continuous(
@@ -979,6 +984,6 @@ graph_move <- function(envdata1, envdata2, store1, store2, move_date,
              limits = c(0,max_axis_temp),
              sec.axis = sec_axis(~ .*(max_axis_RH / max_axis_temp), 
                                  name = 'Rel. Humidity (%)')) +
-           theme(axis.title.y.left = element_text(color = 'red'),
-                 axis.title.y.right = element_text(color = 'blue')))
+           theme(axis.title.y.left = element_text(color = col_temp),
+                 axis.title.y.right = element_text(color = col_RH)))
 }
