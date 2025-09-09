@@ -2,6 +2,10 @@
 library(tidyverse)
 source('R/funs.R')
 
+# This script explains how the functions are used, but will not run without changes.
+# Some variable names demonstrate possible uses and are not defined,
+# and there is no data in 'data/tinytag' in this repository.
+
 # Site information ----
 # Site name to use in tables and graph titles
 site <- 'Anonymous Library'
@@ -9,7 +13,7 @@ site <- 'Anonymous Library'
 # Abbreviation of site for filenames, using underscores rather than spaces
 site_short <- 'AL'
 
-# Currently supports 'tinytag', 'rotronic', 'trendbms', 
+# Currently supports 'tinytag', 'rotronic', 'trendbms',
 # 'tandd', 'miniclima', 'meaco', and 'previous' for csvs generated here.
 # Tinytag and T&D files must be exported to csv before use, but Rotronic xls files can be used directly.
 brand <- 'tinytag'
@@ -63,7 +67,7 @@ envdata_store_rename$location <- str_replace_all(envdata_store_rename$location, 
 # Default 'monthly', accepts 'annual' and 'daily'
 # Includes the 1st and 99th percentile to trim unusual spikes
 site_summary <- summarise_site(envdata_clean, type = 'daily')
-# Default BS 4971, also accepts 'Icon', 'PAS 198', and 'Bizot'
+# Default BS 4971, also accepts 'Icon' (2023 guidance note), 'PAS 198', and 'Bizot'
 # Or set own parameters
 comp <- compliance(envdata_clean, standard = 'Icon' #,
                    #min_temp = 16, max_temp = 23, min_RH = 40, max_RH = 60
@@ -73,24 +77,25 @@ comp <- compliance(envdata_clean, standard = 'Icon' #,
 light <- light_dose(envdata_clean)
 
 # Write .csv files of all data and tables ----
-# Set standard and site and save
-envdata <- envdata_clean
+# Set the name to be used in the filenames if you have subset the data
+site_short <- 'AL_exhib'
+# Set the standard name used in compliance()
 standard <- 'Icon'
-site_short <- 'AL'
-write_csv(envdata, paste0(date(min(envdata$datetime)),'_to_',
-                          date(max(envdata$datetime)), '_data_', 
+
+write_csv(envdata_clean, paste0(date(min(envdata$datetime)),'_to_',
+                          date(max(envdata$datetime)), '_data_',
                           site_short, '.csv'))
 write_csv(monthly_summary, paste0(date(min(envdata$datetime)),'_to_',
-                                  date(max(envdata$datetime)), '_monthly_summary_', 
+                                  date(max(envdata$datetime)), '_monthly_summary_',
                                   site_short, '.csv'))
 write_csv(annual_summary, paste0(date(min(envdata$datetime)),'_to_',
-                                 date(max(envdata$datetime)), '_annual_summary_', 
+                                 date(max(envdata$datetime)), '_annual_summary_',
                                  site_short, '.csv'))
 write_csv(comp, paste0(date(min(envdata$datetime)),'_to_',
-                       date(max(envdata$datetime)), '_', standard, '_compliance_', 
+                       date(max(envdata$datetime)), '_', standard, '_compliance_',
                        site_short, '.csv'))
 write_csv(dose, paste0(date(min(dose$start_period)),'_to_',
-                       date(max(dose$end_period)), '_light_', 
+                       date(max(dose$end_period)), '_light_',
                        site_short, '.csv'))
 
 # Graph ----
@@ -124,13 +129,13 @@ ggsave('AA all stores 2025.png', scale = 1.5, width = 150, height = 100, units =
 graph_light(envdata_exhib, store = 'Case E', title = 'Exhibition case E')
 
 # Standard compliance graphs, set of three for low/good/high temp and RH and overall
-# Set o_t_r to o for overall, t for temperature, or r for RH
+# Set type to o for overall, t for temperature, or r for RH
 # Include standard name or specify range
 # Set custom max/min or standards 'BS 4971', 'PAS 198 25' or 'PAS 198 30' for max 25 or 30C,
 #   'Icon' [2023 environmental guidance note], and 'Bizot'
-graph_compliance(envdata_clean, o_t_r = 'o',
+graph_compliance(envdata_clean, type = 'o',
                  standard = 'Icon')
-graph_compliance(envdata_clean, o_t_r = 't',
+graph_compliance(envdata_clean, type = 't',
                  standard = 'Icon')
-graph_compliance(envdata_clean, o_t_r = 'r',
+graph_compliance(envdata_clean, type = 'r',
                  standard = 'Icon')
