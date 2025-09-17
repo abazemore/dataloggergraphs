@@ -26,7 +26,7 @@ parse_datalogger <- function (datafile, site = '', brand = FALSE) {
   if(brand == 'miniclima') { envdata <- parse_miniClima(datafile, site) }
   if(brand == 'meaco') { envdata <- parse_meaco(datafile, site) }
   if(brand == 'previous') { envdata <- parse_previous(datafile, site) }
-  if(!brand %in% c('tinytag', 'rotronic', 'trendbms', 'bms', 'tandd', 'meaco', 'miniprevious')) { message('Brand not identified') }
+  if(!brand %in% c('tinytag', 'rotronic', 'trendbms', 'bms', 'tandd', 'meaco', 'miniclima', 'previous')) { message('Brand not identified') }
   return(envdata)
 }
 
@@ -299,7 +299,7 @@ parse_meaco <- function(datafile, site = '', model = 'Meaco') {
 #' @returns envdata, a dataframe in a standard format used by other functions in this package
 #'
 #' @noRd
-parse_previous <- function(datafile) {
+parse_previous <- function(datafile, site = '') {
   message('Parsing as previously processed')
   envdata <- read_csv(datafile) %>%
     mutate(datetime = as.POSIXct(datetime))
@@ -526,7 +526,7 @@ set_minmax <- function(standard = 'BS 4971', min_temp = FALSE, max_temp = FALSE,
     min_RH <- switch(
       standard,
       'BS 4971' = 35,
-      'PAS 198 25' = 30,
+      'PAS 198' = 30,
       'Icon' = 35,
       'Bizot' = 40
     )
@@ -598,7 +598,7 @@ compliance <- function(envdata, exclude_stores = FALSE,
       values_to = 'value',
       values_drop_na = TRUE
     ) %>%
-    mutate(
+     mutate(
       rating = fct_relevel(
         rating,
         'RH_high',
@@ -1095,10 +1095,10 @@ graph_compliance <- function(envdata, type = 'o', standard = 'BS 4971',
                              col_low = '#336699', col_good = '#669933', col_high = '#993322',
                              grad_bad = '#990000', grad_mid = '#CC6600', grad_good = '#006600') {
   message('Graphing standard compliance')
-
+  # Subset readings
+  subset <- subset_readings(envdata, start_date = start_date, end_date = end_date, exclude_stores = exclude_stores)
   # Get rating data
-  rated <- compliance(envdata, exclude_stores = exclude_stores,
-                      start_date = start_date, end_date = end_date,
+  rated <- compliance(subset,
                       standard = standard, min_temp = min_temp, max_temp = max_temp,
                       min_RH = min_RH, max_RH = max_RH)
   # Check what kind of graph it should be and set the search term
@@ -1115,7 +1115,7 @@ graph_compliance <- function(envdata, type = 'o', standard = 'BS 4971',
   # (supports BS 4971, PAS 198, Icon, and Bizot)
   minmax <- set_minmax(standard, min_temp, max_temp, min_RH, max_RH)
   # Check for title
-  if (title == FALSE) {
+  if (graph_title == FALSE) {
     graph_title <- paste(subset$site[1], standard, 'compliance')
   }
 

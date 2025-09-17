@@ -16,12 +16,12 @@ site_short <- 'AL'
 # Currently supports 'tinytag', 'rotronic', 'trendbms',
 # 'tandd', 'miniclima', 'meaco', and 'previous' for csvs generated here.
 # Tinytag and T&D files must be exported to csv before use, but Rotronic xls files can be used directly.
-brand <- 'tinytag'
+brand <- 'previous'
 
 # Process data ----
 # Copy the logfiles into dataloggergraphs-main/data, with folders for each brand.
 # Make list of filenames
-filenames <- dir('data/tinytag', full.names=TRUE)
+filenames <- dir('data/previous', full.names=TRUE)
 
 # Get data from files. This runs as a loop for each file.
 datalist <- lapply(filenames, parse_datalogger, site = site, brand = brand)
@@ -66,10 +66,11 @@ envdata_store_rename$location <- str_replace_all(envdata_store_rename$location, 
 
 # Default 'monthly', accepts 'annual' and 'daily'
 # Includes the 1st and 99th percentile to trim unusual spikes
-site_summary <- summarise_site(envdata_clean, type = 'daily')
+site_summary <- summarise_site(envdata_clean, type = 'monthly')
 # Default BS 4971, also accepts 'Icon' (2023 guidance note), 'PAS 198', and 'Bizot'
 # Or set own parameters
-comp <- compliance(envdata_clean, standard = 'Icon' #,
+standard <- 'PAS 198'
+comp <- compliance(envdata_clean, standard = standard #,
                    #min_temp = 16, max_temp = 23, min_RH = 40, max_RH = 60
                    )
 # Summary of light data with percentage of JNF for BW standards
@@ -79,23 +80,21 @@ light <- light_dose(envdata_clean)
 # Write .csv files of all data and tables ----
 # Set the name to be used in the filenames if you have subset the data
 site_short <- 'AL_exhib'
-# Set the standard name used in compliance()
-standard <- 'Icon'
 
-write_csv(envdata_clean, paste0(date(min(envdata$datetime)),'_to_',
-                          date(max(envdata$datetime)), '_data_',
+write_csv(envdata_clean, paste0(date(min(envdata_clean$datetime)),'_to_',
+                          date(max(envdata_clean$datetime)), '_data_',
                           site_short, '.csv'))
-write_csv(monthly_summary, paste0(date(min(envdata$datetime)),'_to_',
-                                  date(max(envdata$datetime)), '_monthly_summary_',
+write_csv(monthly_summary, paste0(date(min(envdata_clean$datetime)),'_to_',
+                                  date(max(envdata_clean$datetime)), '_monthly_summary_',
                                   site_short, '.csv'))
-write_csv(annual_summary, paste0(date(min(envdata$datetime)),'_to_',
-                                 date(max(envdata$datetime)), '_annual_summary_',
+write_csv(annual_summary, paste0(date(min(envdata_clean$datetime)),'_to_',
+                                 date(max(envdata_clean$datetime)), '_annual_summary_',
                                  site_short, '.csv'))
-write_csv(comp, paste0(date(min(envdata$datetime)),'_to_',
-                       date(max(envdata$datetime)), '_', standard, '_compliance_',
+write_csv(comp, paste0(date(min(envdata_clean$datetime)),'_to_',
+                       date(max(envdata_clean$datetime)), '_', standard, '_compliance_',
                        site_short, '.csv'))
-write_csv(dose, paste0(date(min(dose$start_period)),'_to_',
-                       date(max(dose$end_period)), '_light_',
+write_csv(light, paste0(date(min(light$start_period)),'_to_',
+                       date(max(light$end_period)), '_light_',
                        site_short, '.csv'))
 
 # Graph ----
@@ -106,7 +105,7 @@ write_csv(dose, paste0(date(min(dose$start_period)),'_to_',
 graph_store(envdata_clean, min_temp = 16, max_temp = 20, min_RH = 40, max_RH = 60,
             max_axis_RH = 80,
             exclude_stores = 'D',
-            title = 'Anonymous Library main building')
+            graph_title = 'Anonymous Library main building')
 
 # Graph single store
 # Change the value of 'store' to graph a single store or group of stores sharing a pattern
@@ -116,7 +115,7 @@ graph_store(envdata_clean, min_temp = 16, max_temp = 20, min_RH = 40, max_RH = 6
 # The default title is the first location in the subset of the data, but can be changed
 graph_store(envdata_clean, min_temp = 16, max_temp = 20, min_RH = 40, max_RH = 60,
             store = 'D',
-            title = 'Anonymous Library extension')
+            graph_title = 'Anonymous Library extension')
 
 # Graph summary
 graph_summary(envdata_clean)
@@ -126,16 +125,17 @@ graph_summary(envdata_clean)
 ggsave('AA all stores 2025.png', scale = 1.5, width = 150, height = 100, units = 'mm')
 
 # Lux and UV graphs, with customizable max_lux and max_UV
-graph_light(envdata_exhib, store = 'Case E', title = 'Exhibition case E')
+graph_light(envdata_exhib, store = 'Case E', graph_title = 'Exhibition case E')
 
 # Standard compliance graphs, set of three for low/good/high temp and RH and overall
 # Set type to o for overall, t for temperature, or r for RH
 # Include standard name or specify range
 # Set custom max/min or standards 'BS 4971', 'PAS 198 25' or 'PAS 198 30' for max 25 or 30C,
 #   'Icon' [2023 environmental guidance note], and 'Bizot'
+standard = 'BS 4971'
 graph_compliance(envdata_clean, type = 'o',
-                 standard = 'Icon')
+                 standard = standard)
 graph_compliance(envdata_clean, type = 't',
-                 standard = 'Icon')
+                 standard = standard)
 graph_compliance(envdata_clean, type = 'r',
-                 standard = 'Icon')
+                 standard = standard)
