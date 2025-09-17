@@ -70,8 +70,8 @@ site_summary <- summarise_site(envdata_clean, type = 'monthly')
 # Default BS 4971, also accepts 'Icon' (2023 guidance note), 'PAS 198', and 'Bizot'
 # Or set own parameters
 standard <- 'PAS 198'
-comp <- compliance(envdata_clean, standard = standard #,
-                   #min_temp = 16, max_temp = 23, min_RH = 40, max_RH = 60
+comp <- compliance(envdata_clean, standard = standard,
+                   min_temp = 16, max_temp = 23, min_RH = 40, max_RH = 60
                    )
 # Summary of light data with percentage of JNF for BW standards
 # Can be limited to exhibition period with start_date and end_date

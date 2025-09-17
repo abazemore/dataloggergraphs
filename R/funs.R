@@ -654,6 +654,7 @@ graph_store <- function(envdata, store = FALSE, exclude_stores = FALSE,
   start_date <- min(subset$datetime)
   end_date <- max(subset$datetime)
   minmax <- set_minmax(standard, min_temp, max_temp, min_RH, max_RH)
+  trh_ratio <- (max_axis_RH / max_axis_temp)
 
   # store is identifying part of location, does not have to match whole string
   if(store != FALSE) {
@@ -671,6 +672,7 @@ graph_store <- function(envdata, store = FALSE, exclude_stores = FALSE,
     graph_title <- paste('All stores at', subset$site[1])
     }
   }
+
 
   graph_subtitle <- paste(str_remove(dmy_style(min(subset$datetime)), '^0'),'to',
                           str_remove(dmy_style(max(subset$datetime)), '^0'))
@@ -709,7 +711,7 @@ graph_store <- function(envdata, store = FALSE, exclude_stores = FALSE,
                      size = 0.25,
                      #linetype = linetype,
                      alpha = line_alpha) +
-           geom_line(aes(y = RH / (max_axis_RH / max_axis_temp)),
+           geom_line(aes(y = RH / trh_ratio),
                      color = col_RH,
                      size = 0.25,
                      #linetype = linetype,
@@ -721,7 +723,7 @@ graph_store <- function(envdata, store = FALSE, exclude_stores = FALSE,
            scale_y_continuous(
              name = 'Temperature (º C, red)',
              limits = c(0, max_axis_temp),
-             sec.axis = sec_axis( ~ . * (max_axis_RH / max_axis_temp),
+             sec.axis = sec_axis( ~ . * trh_ratio,
                                   name = 'Rel. Humidity (%, blue)',
                                   breaks = c(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100))) +
            theme(axis.title.y.left = element_text(color = col_temp),
@@ -754,7 +756,7 @@ graph_store <- function(envdata, store = FALSE, exclude_stores = FALSE,
 #' @returns ggplot2 Object containing temperature and RH graph with mean line and min/max ribbons
 #'
 #' @examples graph_summary(envdata_exhib, graph_title = 'Exhibition cases', type = 'daily')
-graph_summary <- function(envdata, title = FALSE,
+graph_summary <- function(envdata, graph_title = FALSE,
                           type = 'monthly',
                           store = FALSE, exclude_stores = FALSE,
                           start_date = FALSE, end_date = FALSE,
@@ -764,6 +766,8 @@ graph_summary <- function(envdata, title = FALSE,
                           max_axis_temp = 40, max_axis_RH = 100,
                           col_temp = 'red', col_RH = 'blue') {
   message('Graphing max/min/mean')
+
+  trh_ratio <- (max_axis_RH / max_axis_temp)
   # Set min/max by standard where not specified
   minmax <- set_minmax(standard, min_temp, max_temp, min_RH, max_RH)
 
@@ -785,31 +789,34 @@ graph_summary <- function(envdata, title = FALSE,
                                                                 format = '%Y-%m-%d')) }
   # Graph single store
   # store is identifying part of location, does not have to match whole string
-  if(store != FALSE) {
+  if (store != FALSE) {
     message('Graphing single store')
     line_alpha <- 1
     fill_alpha <- 0.2
+    if (!graph_title) {
     graph_title <- subset$location[1]
+    }
   }
-
 
   # Graph all stores
   if(store == FALSE) {
     message('Graphing all stores')
     line_alpha <- 0.7
     fill_alpha <- 0.05
+    if (!graph_title) {
     graph_title <- paste('All stores at', subset$site[1])
+    }
   }
-  if(title != FALSE) { graph_title <- title }
 
-  graph_subtitle <-  paste(str_remove(dmy_style(min(subset$datetime)), '^0'),
+  graph_subtitle <- paste(str_remove(dmy_style(min(subset$datetime)), '^0'),
   'to',str_remove(dmy_style(max(subset$datetime)), '^0'))
 
   #Create graph ----
   # with time on x axis, temperature on left y axis, and RH on right y axis
-  #Y scales 0-40º and 0-100%
-  #Dotted lines indicate PD5454 storage guidelines
-  return(site_summary %>% ggplot(mapping = aes(x = datetime, group = location)) +
+  # Y scales 0-40º and 0-100%
+  # Dotted lines indicate storage guidelines
+ return(
+    site_summary %>% ggplot(mapping = aes(x = datetime, group = location)) +
            geom_hline(
              yintercept = minmax[1],
              color = col_temp,
@@ -823,13 +830,13 @@ graph_summary <- function(envdata, title = FALSE,
              alpha = 0.8
            ) +
            geom_hline(
-             yintercept = minmax[3] / (max_axis_RH / max_axis_temp),
+             yintercept = minmax[3] / trh_ratio,
              color = col_RH,
              linetype = 'dotted',
              alpha = 0.6
            ) +
            geom_hline(
-             yintercept = minmax[4] / (max_axis_RH / max_axis_temp),
+             yintercept = minmax[4] / trh_ratio,
              color = col_RH,
              linetype = 'dotted',
              alpha = 0.6
@@ -842,19 +849,19 @@ graph_summary <- function(envdata, title = FALSE,
                        fill = col_temp,
                        size = 0.25,
                        alpha = 0.1) +
-           geom_ribbon(aes(ymin = p01_RH, ymax = p99_RH),
+           geom_ribbon(aes(ymin = p01_temp, ymax = p99_temp),
                        fill = col_temp,
                        size = 0.25,
                        alpha = 0.1) +
-           geom_line(aes(y = mean_RH / (max_axis_RH / max_axis_temp)),
+           geom_line(aes(y = mean_RH / trh_ratio),
                      color = col_RH,
                      size = 0.25,
                      alpha = line_alpha) +
-           geom_ribbon(aes(ymin = min_RH, ymax = max_RH),
+           geom_ribbon(aes(ymin = min_RH / trh_ratio, ymax = max_RH / trh_ratio),
                        fill = col_RH,
                        size = 0.25,
                        alpha = 0.1) +
-           geom_ribbon(aes(ymin = p01_RH, ymax = p99_RH),
+           geom_ribbon(aes(ymin = p01_RH / trh_ratio, ymax = p99_RH / trh_ratio),
                        fill = col_RH,
                        size = 0.25,
                        alpha = 0.1) +
@@ -865,12 +872,13 @@ graph_summary <- function(envdata, title = FALSE,
            scale_y_continuous(
              name = 'Temperature (º C)',
              limits = c(0, max_axis_temp),
-             sec.axis = sec_axis( ~ . * (max_axis_RH / max_axis_temp),
+             sec.axis = sec_axis( ~ . * trh_ratio,
                                   name = 'Rel. Humidity (%)',
                                   breaks = c(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100))
            ) +
            theme(axis.title.y.left = element_text(color = col_temp),
-                 axis.title.y.right = element_text(color = col_RH)))
+                 axis.title.y.right = element_text(color = col_RH))
+   )
 }
 
 # Graph light ----
@@ -911,7 +919,7 @@ graph_light <- function(envdata, store = FALSE, exclude_stores = FALSE,
   if(store != FALSE) {
     message('Graphing single store')
     line_alpha <- 1
-    if(graph_title == FALSE) {
+    if(!graph_title) {
     graph_title <- subset$location[1]
     }
   }
@@ -920,7 +928,7 @@ graph_light <- function(envdata, store = FALSE, exclude_stores = FALSE,
   if(store == FALSE) {
     message('Graphing all stores')
     line_alpha <- 0.5
-    if(graph_title == FALSE) {
+    if(!graph_title) {
     graph_title <- paste('All stores at', subset$site[1])
     }
   }
@@ -983,7 +991,7 @@ graph_light <- function(envdata, store = FALSE, exclude_stores = FALSE,
 #' @returns ggplot2 Object containing visible light and UV graph with mean and min/max ribbons
 #'
 #' @examples graph_light_summary(envdata_exhib, graph_title = 'Exhibition cases', type = 'daily')
-graph_light_summary <- function(envdata, title = FALSE,
+graph_light_summary <- function(envdata, graph_title = FALSE,
                                 store = FALSE, exclude_stores = FALSE,
                                 start_date = FALSE, end_date = FALSE,
                                 type = 'monthly',
@@ -1003,7 +1011,9 @@ graph_light_summary <- function(envdata, title = FALSE,
     message('Graphing single store')
     line_alpha <- 1
     fill_alpha <- 0.2
+    if(!graph_title) {
     graph_title <- subset$location[1]
+    }
   }
 
   # Graph all stores
@@ -1011,10 +1021,11 @@ graph_light_summary <- function(envdata, title = FALSE,
     message('Graphing all stores')
     line_alpha <- 0.7
     fill_alpha <- 0.05
+    if(!graph_title) {
     graph_title <- paste('All stores at', subset$site[1])
+    }
   }
 
-  if(title != FALSE) { graph_title <- title }
   date_style <- stamp(date_format)
   graph_subtitle <- paste(dmy_style(min(subset$datetime)),'to',
                           dmy_style(max(subset$datetime)))
@@ -1244,17 +1255,17 @@ graph_move <- function(envdata1, envdata2, store1, store2, move_date,
   return(move %>% ggplot(mapping = aes(x = datetime)) +
            geom_hline(yintercept = min_temp, color = col_temp, linetype = 'dotted', alpha = 0.8) +
            geom_hline(yintercept = max_temp, color = col_temp, linetype = 'dotted', alpha = 0.8) +
-           geom_hline(yintercept = min_RH / (max_axis_RH / max_axis_temp), color = col_RH, linetype = 'dotted', alpha = 0.6) +
-           geom_hline(yintercept = max_RH / (max_axis_RH / max_axis_temp), color = col_RH, alpha = 0.6) +
+           geom_hline(yintercept = min_RH / trh_ratio, color = col_RH, linetype = 'dotted', alpha = 0.6) +
+           geom_hline(yintercept = max_RH / trh_ratio, color = col_RH, alpha = 0.6) +
            geom_vline(xintercept = as.POSIXct(move_date), color = col_line) +
            geom_line(aes(y = temp), color = col_temp, size = 0.25) +
-           geom_line(aes(y = RH/ (max_axis_RH / max_axis_temp)), color = col_RH, size = 0.25) +
+           geom_line(aes(y = RH/ trh_ratio), color = col_RH, size = 0.25) +
            scale_x_datetime(name = 'Date') +
            labs(title = graph_title, subtitle = graph_subtitle) +
            scale_y_continuous(
              name = 'Temperature (º C)',
              limits = c(0,max_axis_temp),
-             sec.axis = sec_axis(~ .*(max_axis_RH / max_axis_temp),
+             sec.axis = sec_axis(~ .*trh_ratio,
                                  name = 'Rel. Humidity (%)')) +
            theme(axis.title.y.left = element_text(color = col_temp),
                  axis.title.y.right = element_text(color = col_RH)))
