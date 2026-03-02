@@ -255,8 +255,26 @@ parse_meaco <- function(datafile, site = '', model = 'Meaco') {
   # Extract first few rows containing logger information
   file_head <- read_csv(datafile, col_names = FALSE,
                         n_max = 1)
-  # Finds out whether the file is temperature or humidity
-  if(str_detect(file_head$X4[1], 'TEMP')) {
+  # Gingerbread uses different format
+  if(str_detect(file_head$X1[1], ' - ID: ')) {
+    envdata <- read_csv(datafile, skip = 1) %>%
+
+      # Add site, location, model, and serial columns, parse as date/time
+      mutate(
+        site = as.character(str_extract(file_head$X1[1], '^[A-Za-z0-9 ]+(?= - )')),
+        location = as.character(str_extract(file_head$X1[1], '(?<= - ).*(?= - )')),
+        datetime = lubridate::parse_date_time(Timestamp, orders=c('dmy HM', 'dmy HMS')),
+        temp = as.numeric(Temperature),
+        RH = as.numeric(Humidity),
+        lux = NA,
+        UV = NA,
+        model = model,
+        serial = 'Serial unknown',
+        .keep = 'none')
+  }
+  # Old system
+  # Check if the file is temperature or humidity
+  else if(str_detect(file_head$X4[1], 'TEMP')) {
     # Rest of file is observations
     envdata <- read_csv(datafile) %>%
 
@@ -264,7 +282,7 @@ parse_meaco <- function(datafile, site = '', model = 'Meaco') {
       mutate(
         site = as.character(RECEIVER),
         location = as.character(TRANSMITTER),
-        datetime = DATE,
+        datetime = as.POSIXct(DATE),
         temp = as.numeric(TEMPERATURE),
         RH = as.numeric(HUMIDITY),
         lux = NA,
@@ -280,7 +298,7 @@ parse_meaco <- function(datafile, site = '', model = 'Meaco') {
       mutate(
         site = as.character(RECEIVER),
         location = as.character(TRANSMITTER),
-        datetime = DATE,
+        datetime = lubridate::parse_date_time(DATE, orders = 'ymd HM'),
         temp = NA,
         RH = NA,
         lux = as.numeric(LUX),
