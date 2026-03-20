@@ -1,10 +1,9 @@
 # Load R packages
 library(shiny)
-library(shinythemes)
 
 
 # Define UI
-ui <- fluidPage(theme = shinytheme('flatly'),
+ui <- fluidPage(theme = shinythemes::shinytheme('flatly'),
                 navbarPage(
                   'Datalogger summary and graphs',
                   tabPanel('Data summary',
@@ -23,11 +22,12 @@ ui <- fluidPage(theme = shinytheme('flatly'),
                                            'Previously processed' = 'previous')),
                              fileInput('files', 'Upload files (.csv)',
                                        multiple = TRUE),
-                             radioButtons('append',
-                                          '',
-                                          choices = c('Append data' = 'append',
-                                                      'Replace data' = 'replace',
-                                                      'Use sample data' = 'sample')),
+                             checkboxInput('sample', 'Use sample data'),
+                             # radioButtons('append',
+                             #              '',
+                             #              choices = c('Append data' = 'append',
+                             #                          'Replace data' = 'replace',
+                             #                          'Use sample data' = 'sample')),
                              actionButton('submit', 'Submit')
 
                            ), # sidebarPanel
