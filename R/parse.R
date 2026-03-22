@@ -16,7 +16,8 @@ parse_brand <- function (filepath,
                          brand = FALSE,
                          site = "",
                          model = "",
-                         location = "") {
+                         location = "",
+                         old_data = NULL) {
   message("Checking brand")
   if (is.character(filepath)) {
     if (stringr::str_detect(filepath, ".csv|.xls")) {
@@ -68,7 +69,7 @@ parse_brand <- function (filepath,
   } else {
     stop("Brand not supported")
   }
-  envdata <- combine_data(datalist)
+  envdata <- combine_data(datalist, old_data = old_data)
 
   envdata
 }

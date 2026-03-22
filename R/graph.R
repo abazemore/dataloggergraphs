@@ -1,3 +1,4 @@
+library(ggplot2)
 dmy_style <- lubridate::stamp('1 March 2021', orders = '%0d %B %Y')
 
 #' Graph temperature and RH for single or multiple stores
@@ -72,16 +73,18 @@ graph_store <- function(envdata,
   }
 
 
-  graph_subtitle <- paste(stringr::str_remove(dmy_style(min(subset$datetime)), '^0'),
-                          'to',
-                          stringr::str_remove(dmy_style(max(subset$datetime)), '^0'))
+  graph_subtitle <- paste(
+    stringr::str_remove(dmy_style(min(subset$datetime)), '^0'),
+    'to',
+    stringr::str_remove(dmy_style(max(subset$datetime)), '^0')
+  )
 
   # Create graph
   # with time on x axis, temperature on left y axis, and RH on right y axis
   # Y scales 0-40º and 0-100% by default
   # Dotted lines indicate BS4971 storage guidelines
   return(
-    subset |> ggplot2::ggplot(mapping = aes(x = datetime, group = location)) +
+    subset |> ggplot(mapping = aes(x = datetime, group = location)) +
       geom_hline(
         yintercept = minmax[1],
         color = col_temp,
@@ -233,16 +236,18 @@ graph_summary <- function(envdata,
     }
   }
 
-  graph_subtitle <- paste(stringr::str_remove(dmy_style(min(subset$datetime)), '^0'),
-                          'to',
-                          stringr::str_remove(dmy_style(max(subset$datetime)), '^0'))
+  graph_subtitle <- paste(
+    stringr::str_remove(dmy_style(min(subset$datetime)), '^0'),
+    'to',
+    stringr::str_remove(dmy_style(max(subset$datetime)), '^0')
+  )
 
   #Create graph ----
   # with time on x axis, temperature on left y axis, and RH on right y axis
   # Y scales 0-40º and 0-100%
   # Dotted lines indicate storage guidelines
   return(
-    site_summary |> ggplot2::ggplot(mapping = aes(x = datetime, group = location)) +
+    site_summary |> ggplot(mapping = aes(x = datetime, group = location)) +
       geom_hline(
         yintercept = minmax[1],
         color = col_temp,
@@ -388,15 +393,17 @@ graph_light <- function(envdata,
     }
   }
 
-  graph_subtitle <- paste(stringr::str_remove(dmy_style(subset$start_period[1]), '^0'),
-                          'to',
-                          stringr::str_remove(dmy_style(subset$end_period[1]), '^0'))
+  graph_subtitle <- paste(
+    stringr::str_remove(dmy_style(subset$start_date[1]), '^0'),
+    'to',
+    stringr::str_remove(dmy_style(subset$end_date[1]), '^0')
+  )
 
   #Create graph ----
   # with time on x axis, light on left y axis, and UV on right y axis
   #Dotted line indicates max lux for display
   return(
-    subset |> ggplot2::ggplot(mapping = aes(x = datetime, group = location)) +
+    subset |> ggplot(mapping = aes(x = datetime, group = location)) +
       geom_hline(
         yintercept = max_lux,
         color = col_lux,
@@ -429,7 +436,7 @@ graph_light <- function(envdata,
       labs(title = graph_title, subtitle = graph_subtitle) +
       scale_y_continuous(
         name = 'Visible light (lux)',
-        sec.axis = sec_axis(~ . / max(subset$lux), name = 'UV (μW/lumen)')
+        sec.axis = sec_axis( ~ . / max(subset$lux), name = 'UV (μW/lumen)')
       ) +
       theme(
         axis.title.y.left = element_text(color = col_lux),
@@ -464,6 +471,7 @@ graph_light_summary <- function(envdata,
                                 start_date = FALSE,
                                 end_date = FALSE,
                                 type = 'monthly',
+                                percentile = FALSE,
                                 breaks = '2 months',
                                 date_format = '%m/%Y',
                                 max_lux = 50,
@@ -478,10 +486,7 @@ graph_light_summary <- function(envdata,
     start_date = start_date,
     end_date = end_date
   )
-  if (type == 'monthly') {
-    subset <-  dplyr::mutate(subset, datetime = as.POSIXct(paste0(year, '-', month, '-01'), format = '%Y-%m-%d'))
-  }
-
+  site_summary <- summarize_site(subset, type = type, percentile = percentile)
   # Graph single store
   # store is identifying part of location, does not have to match whole string
   if (store != FALSE) {
@@ -508,63 +513,63 @@ graph_light_summary <- function(envdata,
 
   #Create graph ----
   # with time on x axis, lux on left y axis, and UV on right y axis
-  #Dotted line indicates max 50 lux for display
-  return(
-    subset |> ggplot2::ggplot(mapping = aes(x = datetime, group = location)) +
-      geom_hline(
-        yintercept = max_lux,
-        color = col_lux,
-        linetype = 'dotted',
-        alpha = 0.8
-      ) +
-      geom_line(
-        aes(y = mean_lux),
-        color = col_lux,
-        size = 0.25,
-        alpha = line_alpha
-      ) +
-      geom_ribbon(
-        aes(ymin = min_lux, ymax = max_lux),
-        fill = col_lux,
-        size = 0.25,
-        alpha = 0.2
-      ) +
-      geom_ribbon(
-        aes(ymin = p01_lux, ymax = p99_lux),
-        fill = col_lux,
-        size = 0.25,
-        alpha = 0.1
-      ) +
-      geom_line(
-        aes(y = mean_UV / 2.5),
-        color = col_UV,
-        size = 0.25,
-        alpha = line_alpha
-      ) +
-      geom_ribbon(
-        aes(ymin = min_UV, ymax = max_UV),
-        fill = col_UV,
-        size = 0.25,
-        alpha = 0.1
-      ) +
-      geom_ribbon(
-        aes(ymin = p01_UV, ymax = p99_UV),
-        fill = col_UV,
-        size = 0.25,
-        alpha = 0.1
-      ) +
-      scale_x_datetime(
-        name = 'Date',
-        date_breaks = breaks,
-        date_labels = date_format
-      ) +
-      labs(title = graph_title, subtitle = graph_subtitle) +
-      scale_y_continuous(name = 'Visible light (lux)', sec.axis = sec_axis(name = 'UV (μW/lumen)')) +
-      theme(
-        axis.title.y.left = element_text(color = col_lux),
-        axis.title.y.right = element_text(color = col_UV)
-      )
-  )
+  summary_graph |> ggplot(mapping = aes(x = datetime, group = location)) +
+    geom_hline(
+      yintercept = max_lux,
+      color = col_lux,
+      linetype = 'dotted',
+      alpha = 0.8
+    ) +
+    geom_line(aes(y = mean_lux),
+              color = col_lux,
+              size = 0.25,
+              alpha = line_alpha) +
+    geom_ribbon(
+      aes(ymin = min_lux, ymax = max_lux),
+      fill = col_lux,
+      size = 0.25,
+      alpha = 0.2
+    ) +
+    geom_line(
+      aes(y = mean_UV / 2.5),
+      color = col_UV,
+      size = 0.25,
+      alpha = line_alpha
+    ) +
+    geom_ribbon(
+      aes(ymin = min_UV, ymax = max_UV),
+      fill = col_UV,
+      size = 0.25,
+      alpha = 0.1
+    ) +
+    scale_x_datetime(name = 'Date',
+                     date_breaks = breaks,
+                     date_labels = date_format) +
+    labs(title = graph_title, subtitle = graph_subtitle) +
+    scale_y_continuous(name = 'Visible light (lux)', sec.axis = sec_axis(name = 'UV (μW/lumen)')) +
+    theme(
+      axis.title.y.left = element_text(color = col_lux),
+      axis.title.y.right = element_text(color = col_UV)
+    )
+
+
+
+if(percentile == TRUE) {
+  summary_graph <- summary_graph +
+    geom_ribbon(
+      aes(ymin = p01_lux, ymax = p99_lux),
+      fill = col_lux,
+      size = 0.25,
+      alpha = 0.1
+    ) +
+    geom_ribbon(
+      aes(ymin = p01_UV, ymax = p99_UV),
+      fill = col_UV,
+      size = 0.25,
+      alpha = 0.1
+    )
+}
+  summary_graph
 }
 
 #' Graph standard compliance
@@ -660,14 +665,16 @@ graph_compliance <- function(envdata,
   }
   if (grepl('r', type, ignore.case = T)) {
     message('Graphing RH compliance')
-    graph_subtitle <- paste('RH rating',
-                            stringr::str_remove(dmy_style(min(
-                              subset$datetime
-                            )), '^0'),
-                            'to',
-                            stringr::str_remove(dmy_style(max(
-                              subset$datetime
-                            )), '^0'))
+    graph_subtitle <- paste(
+      'RH rating',
+      stringr::str_remove(dmy_style(min(
+        subset$datetime
+      )), '^0'),
+      'to',
+      stringr::str_remove(dmy_style(max(
+        subset$datetime
+      )), '^0')
+    )
     high <- paste0('Above ', minmax[4], '%')
     low <- paste0('Below ', minmax[3], '%')
   }
@@ -689,7 +696,7 @@ graph_compliance <- function(envdata,
   if (!grepl('o', type)) {
     message('Creating graph')
     return(
-      ggplot2::ggplot(rated, aes(
+      ggplot(rated, aes(
         x = factor(location, levels = rev(levels(
           factor(location)
         ))),
@@ -721,7 +728,7 @@ graph_compliance <- function(envdata,
     # for alphabetical x = factor(location,
     # levels = rev(levels(factor(location))))
     return(
-      ggplot2::ggplot(rated, aes(
+      ggplot(rated, aes(
         #for alphabetical
         x = factor(location, levels = rev(levels(
           factor(location)
@@ -818,9 +825,9 @@ graph_move <- function(envdata1,
     graph_title <- paste(premove$location[1], 'to', postmove$location[1])
   }
   graph_subtitle <- paste0(
-    stringr::str_remove(dmy_style(subset$start_period[1]), '$0'),
+    stringr::str_remove(dmy_style(subset$start_date[1]), '$0'),
     'to',
-    stringr::str_remove(dmy_style(subset$end_period[1]), '$0'),
+    stringr::str_remove(dmy_style(subset$end_date[1]), '$0'),
     ', moved ',
     stringr::str_remove(dmy_style(move_date), '^0')
   )
@@ -828,7 +835,7 @@ graph_move <- function(envdata1,
   #Create graph with time on x axis, temperature on left y axis, and RH on right y axis
   #Y scales 0-40º and 0-100%
   return(
-    move |> ggplot2::ggplot(mapping = aes(x = datetime)) +
+    move |> ggplot(mapping = aes(x = datetime)) +
       geom_hline(
         yintercept = min_temp,
         color = col_temp,
@@ -860,7 +867,7 @@ graph_move <- function(envdata1,
       scale_y_continuous(
         name = 'Temperature (º C)',
         limits = c(0, max_axis_temp),
-        sec.axis = sec_axis( ~ . * trh_ratio, name = 'Rel. Humidity (%)')
+        sec.axis = sec_axis(~ . * trh_ratio, name = 'Rel. Humidity (%)')
       ) +
       theme(
         axis.title.y.left = element_text(color = col_temp),

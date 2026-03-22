@@ -5,16 +5,16 @@
 #' @returns envdata A dataframe containing all rows in `datalist`, with combined temperature and RH files from Trend
 #'
 #' @noRd
-combine_data <- function(datalist) {
+combine_data <- function(datalist, old_data = NULL) {
   message('Combining files')
 
+  datalist <- append(list(old_data), datalist)
   datalist <- purrr::keep(datalist, is.data.frame)
 
   envdata <- dplyr::bind_rows(datalist) |> dplyr::distinct()
 
   # Join where temperature and humidity are in separate files
-  if (nrow(dplyr::filter(envdata, grepl('Trend', envdata$model) &
-                         is.na(envdata$temp))) > 0) {
+  if (nrow(dplyr::filter(envdata, grepl('Trend', envdata$model)))) {
     message('Merging T&RH files')
     envdata_notbms <- dplyr::filter(envdata, !grepl('Trend', envdata$model))
     envdata_bms <- dplyr::filter(envdata, grepl('Trend', envdata$model))
@@ -100,7 +100,7 @@ remove_faulty <- function(envdata,
                                     &
                                       (is.na(RH) | between(RH, min_RH, max_RH))))
   message('Removed ', nrow(envdata) - nrow(subset), ' readings')
-  return(subset)
+  subset
 }
 
 subset_readings <- function(envdata,
