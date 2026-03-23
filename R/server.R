@@ -1,39 +1,39 @@
 library(shiny)
-library(shinythemes)
-source("funs.R")
 
-# Define server function  
+# source("parse.R")
+# source("tidy.R")
+# source("summarize.R")
+# source("graph.R")
+
+# Define server function
 server <- function(input, output) {
-  
   # Tab 1: Load files and parse ----
-  # output$contents <- renderTable({
-  #   file <- input$file1
-  #   ext <- tools::file_ext(file$datapath)
-  #   
-  #   req(file)
-  #   validate(need(ext == "csv", "Please upload a csv file"))
-  #   
-  #   read.csv(file$datapath, header = input$header)
-  # })
-datalist <- eventReactive(input$submit, {
-  message("Creating list of files")
-  req(input$files)
-  input$files$datapath
-})
-  envdata <- eventReactive(input$submit, {
-    message("Processing files")
-    req(datalist())
-# Take file list and parse each file then combine
-    lapply(datalist(), parse_datalogger,
-           site = input$site, brand = input$brand) %>%
-  combine_data(input$brand)
-  })
-  
+
+  envdata <- reactive({
+    if (input$sample == TRUE) {
+      parse_brand("../tests/testthat/fixtures/previous/sample_data.csv",
+                  brand = "previous")
+    } else if (length(input$files) > 0) {
+      parse_brand(input$files,
+                  brand = input$brand,
+                  site = input$site)
+    }
+
+
+  }) |>
+    bindEvent(input$submit)
+
+
   # Prepare download button
   output$prep_download_data <- downloadHandler(
-    filename = function() {str_c(date(min(envdata()$datetime)),"_to_",
-                                 date(max(envdata()$datetime)), "_data_",
-                                 input$site_short, ".csv")},
+    filename = function() {
+      stringr::str_c(date(min(envdata()$datetime)),
+                     "_to_",
+                     date(max(envdata()$datetime)),
+                     "_data_",
+                     input$site_short,
+                     ".csv")
+    },
     content = function(file) {
       write.csv(envdata(), file)
     }
@@ -43,23 +43,28 @@ datalist <- eventReactive(input$submit, {
     req(envdata())
     downloadButton("prep_download_data", "Download all data")
   })
-  
+
   # Summary
   site_summary <- eventReactive(input$submit, {
     message("Preparing summary")
-    req(envdata())
-    summarise_site(envdata())
+    req(envdata)
+    summarize_site(envdata(), percentile = input$percentile)
   })
 
-  output$summary <- renderDataTable ( {
-        site_summary()
-    } )
+  output$summary <- DT::renderDT ({
+    site_summary()
+  })
 
-# Prepare download button
+  # Prepare download button
   output$prep_download_summary <- downloadHandler(
-    filename = function() {str_c(date(min(envdata()$datetime)),"_to_",
-                                 date(max(envdata()$datetime)), "_summary_",
-                                 input$site_short, ".csv")},
+    filename = function() {
+      stringr::str_c(date(min(envdata()$datetime)),
+                     "_to_",
+                     date(max(envdata()$datetime)),
+                     "_summary_",
+                     input$site_short,
+                     ".csv")
+    },
     content = function(file) {
       write.csv(site_summary(), file)
     }
@@ -69,144 +74,212 @@ datalist <- eventReactive(input$submit, {
     req(site_summary())
     downloadButton("prep_download_summary", "Download summary")
   })
-  
-  
+
+
   # Environmental graphs tab ----
 
   # Sidebar dropdown unique values in summary for different stores
   output$unique_stores <- renderUI({
     req(site_summary())
-    radioButtons("store", "Select store to graph:",
+    radioButtons("store",
+                 "Select store to graph:",
                  choices = unique(site_summary()$location))
   })
   output$graph_type <- renderUI({
-    req(site_summary())
-    radioButtons("graph_type", "Graph type:",
-                 choices = c("All data" = "all", 
-                             "Monthly summary" = "summary"))
+    req(site_summary)
+    radioButtons("graph_type",
+                 "Graph type:",
+                 choices = c("All data" = "all", "Summary" = "summary"))
   })
   # Sidebar date range
   output$input_daterange <- renderUI({
-    req(envdata())
-    dateRangeInput("daterange", "Date range:",
-                   start = min(envdata()$datetime),
-                   end = max(envdata()$datetime),
-                   min = min(envdata()$datetime),
-                   max = max(envdata()$datetime),)
-    
+    req(envdata)
+    dateRangeInput(
+      "daterange",
+      "Date range:",
+      start = min(envdata()$datetime),
+      end = max(envdata()$datetime),
+      min = min(envdata()$datetime),
+      max = max(envdata()$datetime),
+    )
+
   })
-  output$allstores_graph <- renderPlot({ 
-    req(envdata(), input$daterange)
-    if(input$graph_type == "summary") {
-        graph_summary(site_summary(),
-                      start_date = input$daterange[1],
-                      end_date = input$daterange[2])
+  output$allstores_graph <- renderPlot({
+    req(envdata, input$daterange)
+    if (input$graph_type == "summary") {
+      if ("min_temp" %in% names(site_summary())) {
+        message("trh")
+        graph_summary(
+          envdata(),
+          type = input$summary_type,
+          percentile = input$percentile,
+          start_date = input$daterange[1],
+          end_date = input$daterange[2]
+        )
       }
-    else {
-      graph_store(envdata(),
-                  start_date = input$daterange[1],
-                  end_date = input$daterange[2]
-                  )
+      else if ("min_lux" %in% names(site_summary())) {
+        message("lux")
+        graph_light_summary(
+          envdata(),
+          type = input$summary_type,
+          percentile = input$percentile
+          # start_date = input$daterange[1],
+          # end_date = input$daterange[2]
+        )
+      }
     }
-        })
+    else {
+      if ("min_temp" %in% names(site_summary())) {
+        graph_store(
+          envdata(),
+          start_date = input$daterange[1],
+          end_date = input$daterange[2]
+        )
+      }
+      else if ("min_lux" %in% names(site_summary())) {
+        graph_light(
+          envdata(),
+          start_date = input$daterange[1],
+          end_date = input$daterange[2]
+        )
+      }
+    }
+  })
   output$singlestore_graph <- renderPlot({
-    req(envdata(), input$store)
-     if(input$graph_type == "summary") {
-       graph_summary(site_summary(), store = input$store,
-                     start_date = input$daterange[1],
-                     end_date = input$daterange[2])
-       
-     }
-    else {
-      graph_store(envdata(), store = input$store,
-                  start_date = input$daterange[1],
-                  end_date = input$daterange[2])
+    req(envdata, input$store)
+    if (input$graph_type == "summary") {
+        graph_summary(
+          envdata(),
+          store = input$store,
+          start_date = input$daterange[1],
+          end_date = input$daterange[2],
+          type = input$summary_type,
+          percentile = input$percentile
+        )
+    } else {
+      graph_store(
+        envdata(),
+        store = input$store,
+        start_date = input$daterange[1],
+        end_date = input$daterange[2]
+      )
     }
-  })
-  
 
-  # BS4971 compliance tab ----
-  
+  })
+
+
+  # Standard compliance tab ----
+
   # Sidebar date range
-  output$input_daterange_bs <- renderUI({
-    req(envdata())
-    dateRangeInput("daterange_bs", "Date range:",
-                   start = min(envdata()$datetime),
-                   end = max(envdata()$datetime),
-                   min = min(envdata()$datetime),
-                   max = max(envdata()$datetime),)
-    
+  output$input_daterange_comp <- renderUI({
+    req(envdata)
+    dateRangeInput(
+      "daterange_comp",
+      "Date range:",
+      start = min(envdata()$datetime),
+      end = max(envdata()$datetime),
+      min = min(envdata()$datetime),
+      max = max(envdata()$datetime),
+    )
+
   })
-  bs <- reactive({
-    message("Preparing BS4971 summary")
-    req(envdata())
-    bs4971(envdata(), 
-           start_date = input$daterange_bs[1],
-           end_date = input$daterange_bs[2])
+  comp <- reactive({
+    message("Preparing compliance summary")
+    req(envdata)
+    compliance(
+      envdata(),
+      start_date = input$daterange_comp[1],
+      end_date = input$daterange_comp[2]
+    )
   })
-  # Download BS4971 summary button
+  # Download compliance summary button
   # Prepare download button
-  output$prep_bssum <- downloadHandler(
-    filename = function() {str_c(date(min(envdata()$datetime)),"_to_",
-                                 date(max(envdata()$datetime)), "_BS4971_summary_",
-                                 input$site_short, ".csv")},
+  output$prep_compsum <- downloadHandler(
+    filename = function() {
+      stringr::str_c(
+        date(min(envdata()$datetime)),
+        "_to_",
+        date(max(envdata()$datetime)),
+        "_compliance_summary_",
+        input$site_short,
+        ".csv"
+      )
+    },
     content = function(file) {
-      write.csv(bs(), file)
+      write.csv(comp(), file)
     }
   )
   # Only show download button when data is available
-  output$download_bssum <- renderUI({
-    req(bs())
-    downloadButton("prep_bssum", "Download summary (.csv)")
+  output$download_compsum <- renderUI({
+    req(comp)
+    downloadButton("prep_compsum", "Download summary (.csv)")
   })
 
   # Prepare download button
-  output$prep_bsgraphs <- downloadHandler(
-    filename = function() {str_c(date(min(envdata()$datetime)),"_to_",
-                                 date(max(envdata()$datetime)), "_BS4971_graphs_",
-                                 input$site_short, ".csv")},
+  output$prep_compgraphs <- downloadHandler(
+    filename = function() {
+      stringr::str_c(date(min(envdata()$datetime)),
+                     "_to_",
+                     date(max(envdata()$datetime)),
+                     "_compliance_graphs_",
+                     input$site_short,
+                     ".csv")
+    },
     content = function(file) {
-      write.csv(bs(), file)
+      write.csv(comp(), file)
     }
   )
   # Only show download button when data is available
-  output$download_bsgraphs <- renderUI({
-    req(bs())
-    downloadButton("prep_download_bsgraph", "Download graphs (.zip)")
+  output$download_compgraphs <- renderUI({
+    req(comp)
+    downloadButton("prep_download_compgraph", "Download graphs (.zip)")
   })
-  output$bs4971_table <- renderDataTable( bs() )
-  output$bs4971_graph <- renderPlot( graph_bs4971(bs(), "B"))
-  output$bs4971_temp <- renderPlot( graph_bs4971(bs(), "t"))
-  output$bs4971_RH <- renderPlot( graph_bs4971(bs(), "R"))
-  
-  
+  output$comp_table <- DT::renderDT(comp())
+  output$comp_graph <- renderPlot(graph_compliance(envdata(), "o", standard = input$standard,
+                                                   start_date = input$daterange_comp[1],
+                                                   end_date = input$daterange_comp[2]))
+  output$comp_temp <- renderPlot(graph_compliance(envdata(), "t", standard = input$standard,
+                                 start_date = input$daterange_comp[1],
+                                 end_date = input$daterange_comp[2]))
+  output$comp_RH <- renderPlot(graph_compliance(envdata(), "r", standard = input$standard,
+                               start_date = input$daterange_comp[1],
+                               end_date = input$daterange_comp[2]))
+
+
   # Light data tab ----
+  # On hold until webapp can use original filenames to extract location and serial.
   output$input_daterange_light <- renderUI({
-    req(envdata())
-    dateRangeInput("daterange", "Date range:",
-                   start = min(envdata()$datetime),
-                   end = max(envdata()$datetime),
-                   min = min(envdata()$datetime),
-                   max = max(envdata()$datetime),)
-    
+    req(envdata)
+    dateRangeInput(
+      "daterange",
+      "Date range:",
+      start = min(envdata()$datetime),
+      end = max(envdata()$datetime),
+      min = min(envdata()$datetime),
+      max = max(envdata()$datetime),
+    )
+
   })
   output$allstores_light <- renderPlot({
-    req(envdata(), input$daterange)
-      graph_light(envdata(),
-                    start_date = input$daterange[1],
-                    end_date = input$daterange[2])
-  })
-  output$singlestore_light <- renderPlot({
-    req(envdata(), input$daterange)
-    graph_light(envdata(), store = input$store,
+    req(envdata, input$daterange)
+    graph_light(envdata(),
                 start_date = input$daterange[1],
                 end_date = input$daterange[2])
   })
+  output$singlestore_light <- renderPlot({
+    req(envdata, input$daterange)
+    graph_light(
+      envdata(),
+      store = input$store,
+      start_date = input$daterange[1],
+      end_date = input$daterange[2]
+    )
+  })
 
-  output$lightdose <- renderDataTable ( {
-    light_dose(envdata(),
+  output$lightdose <- DT::renderDT ({
+    light_dose(envdata,
                start_date = input$daterange[1],
                end_date = input$daterange[2])
-  } )
-  
+  })
+
 }
