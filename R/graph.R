@@ -42,6 +42,18 @@ graph_store <- function(envdata,
                         col_temp = 'red',
                         col_RH = 'blue') {
   message('Graphing T&RH')
+  if(!"temp" %in% names(envdata) && "lux" %in% names(envdata)) {
+    graph_light(envdata,
+                        graph_title = graph_title,
+                        type = type,
+                        percentile = percentile,
+                        store = store,
+                        exclude_stores = exclude_stores,
+                        start_date = start_date,
+                        end_date = end_date,
+                        date_format = date_format,
+                        breaks = breaks)
+  }
   subset <- subset_readings(
     envdata,
     store = store,
@@ -112,15 +124,13 @@ graph_store <- function(envdata,
       geom_line(
         aes(y = temp),
         color = col_temp,
-        size = 0.25,
-        #linetype = linetype,
+        linewidth = 0.25,
         alpha = line_alpha
       ) +
       geom_line(
         aes(y = RH / trh_ratio),
         color = col_RH,
-        size = 0.25,
-        #linetype = linetype,
+        linewidth = 0.25,
         alpha = line_alpha
       ) +
       scale_x_datetime(
@@ -173,6 +183,7 @@ graph_store <- function(envdata,
 graph_summary <- function(envdata,
                           graph_title = FALSE,
                           type = 'monthly',
+                          percentile = FALSE,
                           store = FALSE,
                           exclude_stores = FALSE,
                           start_date = FALSE,
@@ -189,7 +200,18 @@ graph_summary <- function(envdata,
                           col_temp = 'red',
                           col_RH = 'blue') {
   message('Graphing max/min/mean')
-
+  if(!"temp" %in% names(envdata) && "lux" %in% names(envdata)) {
+    graph_light_summary(envdata,
+                        graph_title = graph_title,
+                        type = type,
+                        percentile = percentile,
+                        store = store,
+                        exclude_stores = exclude_stores,
+                        start_date = start_date,
+                        end_date = end_date,
+                        date_format = date_format,
+                        breaks = breaks)
+  }
   trh_ratio <- (max_axis_RH / max_axis_temp)
   # Set min/max by standard where not specified
   minmax <- set_minmax(standard, min_temp, max_temp, min_RH, max_RH)
@@ -202,13 +224,16 @@ graph_summary <- function(envdata,
     start_date = start_date,
     end_date = end_date
   )
-  site_summary <- summarise_site(subset, type = type)
+  site_summary <- summarize_site(subset, type = type, percentile = percentile)
 
 
   # Add datetime column for graphing
   if (type == 'daily') {
     site_summary <-  dplyr::mutate(site_summary, datetime = as.POSIXct(paste0(year, '-', month, '-', day), format = '%Y-%m-%d'))
   }
+  # if (type == 'weekly') {
+  #   site_summary <-  dplyr::mutate(site_summary, datetime = as.POSIXct(paste0(year, '-', week), format = '%Y-%m-%w'))
+  # }
   if (type == 'monthly') {
     site_summary <-  dplyr::mutate(site_summary, datetime = as.POSIXct(paste0(year, '-', month, '-01'), format = '%Y-%m-%d'))
   }
@@ -231,7 +256,7 @@ graph_summary <- function(envdata,
     message('Graphing all stores')
     line_alpha <- 0.7
     fill_alpha <- 0.05
-    if (!graph_title) {
+    if (graph_title == FALSE) {
       graph_title <- paste('All stores at', subset$site[1])
     }
   }
@@ -246,8 +271,7 @@ graph_summary <- function(envdata,
   # with time on x axis, temperature on left y axis, and RH on right y axis
   # Y scales 0-40º and 0-100%
   # Dotted lines indicate storage guidelines
-  return(
-    site_summary |> ggplot(mapping = aes(x = datetime, group = location)) +
+  summary_graph <- ggplot(site_summary, mapping = aes(x = datetime, group = location)) +
       geom_hline(
         yintercept = minmax[1],
         color = col_temp,
@@ -275,37 +299,25 @@ graph_summary <- function(envdata,
       geom_line(
         aes(y = mean_temp),
         color = col_temp,
-        size = 0.25,
+        linewidth = 0.25,
         alpha = line_alpha
       ) +
       geom_ribbon(
         aes(ymin = min_temp, ymax = max_temp),
         fill = col_temp,
-        size = 0.25,
-        alpha = 0.1
-      ) +
-      geom_ribbon(
-        aes(ymin = p01_temp, ymax = p99_temp),
-        fill = col_temp,
-        size = 0.25,
+        linewidth = 0.25,
         alpha = 0.1
       ) +
       geom_line(
         aes(y = mean_RH / trh_ratio),
         color = col_RH,
-        size = 0.25,
+        linewidth = 0.25,
         alpha = line_alpha
       ) +
       geom_ribbon(
         aes(ymin = min_RH / trh_ratio, ymax = max_RH / trh_ratio),
         fill = col_RH,
-        size = 0.25,
-        alpha = 0.1
-      ) +
-      geom_ribbon(
-        aes(ymin = p01_RH / trh_ratio, ymax = p99_RH / trh_ratio),
-        fill = col_RH,
-        size = 0.25,
+        linewidth = 0.25,
         alpha = 0.1
       ) +
       scale_x_datetime(
@@ -327,7 +339,24 @@ graph_summary <- function(envdata,
         axis.title.y.left = element_text(color = col_temp),
         axis.title.y.right = element_text(color = col_RH)
       )
-  )
+
+
+  if(percentile == TRUE) {
+    summary_graph <- summary_graph +
+    geom_ribbon(
+      aes(ymin = p01_RH / trh_ratio, ymax = p99_RH / trh_ratio),
+      fill = col_RH,
+      linewidth = 0.25,
+      alpha = 0.1
+    ) +
+      geom_ribbon(
+        aes(ymin = p01_temp, ymax = p99_temp),
+        fill = col_temp,
+        linewidth = 0.25,
+        alpha = 0.1
+      )
+  }
+  summary_graph
 }
 
 # Graph light ----
@@ -419,13 +448,13 @@ graph_light <- function(envdata,
       geom_line(
         aes(y = lux),
         color = col_lux,
-        size = 0.25,
+        linewidth = 0.25,
         alpha = line_alpha
       ) +
       geom_line(
         aes(y = UV / 2.5),
         color = col_UV,
-        size = 0.25,
+        linewidth = 0.25,
         alpha = line_alpha
       ) +
       scale_x_datetime(
@@ -522,24 +551,24 @@ graph_light_summary <- function(envdata,
     ) +
     geom_line(aes(y = mean_lux),
               color = col_lux,
-              size = 0.25,
+              linewidth = 0.25,
               alpha = line_alpha) +
     geom_ribbon(
       aes(ymin = min_lux, ymax = max_lux),
       fill = col_lux,
-      size = 0.25,
+      linewidth = 0.25,
       alpha = 0.2
     ) +
     geom_line(
       aes(y = mean_UV / 2.5),
       color = col_UV,
-      size = 0.25,
+      linewidth = 0.25,
       alpha = line_alpha
     ) +
     geom_ribbon(
       aes(ymin = min_UV, ymax = max_UV),
       fill = col_UV,
-      size = 0.25,
+      linewidth = 0.25,
       alpha = 0.1
     ) +
     scale_x_datetime(name = 'Date',
@@ -559,13 +588,13 @@ if(percentile == TRUE) {
     geom_ribbon(
       aes(ymin = p01_lux, ymax = p99_lux),
       fill = col_lux,
-      size = 0.25,
+      linewidth = 0.25,
       alpha = 0.1
     ) +
     geom_ribbon(
       aes(ymin = p01_UV, ymax = p99_UV),
       fill = col_UV,
-      size = 0.25,
+      linewidth = 0.25,
       alpha = 0.1
     )
 }
@@ -620,6 +649,7 @@ graph_compliance <- function(envdata,
     end_date = end_date,
     exclude_stores = exclude_stores
   )
+
   # Get rating data
   rated <- compliance(
     subset,
@@ -635,10 +665,10 @@ graph_compliance <- function(envdata,
                      't' = 'temp',
                      'r' = 'RH')
   # Filter the rating data for the relevant rows
-  rated <-  dplyr::filter(rated, grepl(grep_str, rated$rating))
-  if (type == 't' || type == 'r') {
-    rated <- dplyr::filter(rated, !grepl('mean', rated$rating))
-  }
+  rated <-  dplyr::filter(rated, grepl(grep_str, rating), !grepl("mean", rating))
+  # if (type == 't' || type == 'r') {
+  #   rated <- dplyr::filter(rated, !grepl('mean', rated$rating))
+  # }
   # Assign the minimum and maximum by standard or manually
   # (supports BS 4971, PAS 198, Icon, and Bizot)
   minmax <- set_minmax(standard, min_temp, max_temp, min_RH, max_RH)
@@ -860,8 +890,8 @@ graph_move <- function(envdata1,
         alpha = 0.6
       ) +
       geom_vline(xintercept = as.POSIXct(move_date), color = col_line) +
-      geom_line(aes(y = temp), color = col_temp, size = 0.25) +
-      geom_line(aes(y = RH / trh_ratio), color = col_RH, size = 0.25) +
+      geom_line(aes(y = temp), color = col_temp, linewidth = 0.25) +
+      geom_line(aes(y = RH / trh_ratio), color = col_RH, linewidth = 0.25) +
       scale_x_datetime(name = 'Date') +
       labs(title = graph_title, subtitle = graph_subtitle) +
       scale_y_continuous(

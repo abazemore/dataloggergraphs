@@ -1,9 +1,9 @@
 library(shiny)
 
-source("parse.R")
-source("tidy.R")
-source("summarize.R")
-source("graph.R")
+# source("parse.R")
+# source("tidy.R")
+# source("summarize.R")
+# source("graph.R")
 
 # Define server function
 server <- function(input, output) {
@@ -111,18 +111,20 @@ server <- function(input, output) {
         message("trh")
         graph_summary(
           envdata(),
+          type = input$summary_type,
+          percentile = input$percentile,
           start_date = input$daterange[1],
-          end_date = input$daterange[2],
-          type = input$graph_type
+          end_date = input$daterange[2]
         )
       }
       else if ("min_lux" %in% names(site_summary())) {
         message("lux")
         graph_light_summary(
           envdata(),
-          start_date = input$daterange[1],
-          end_date = input$daterange[2],
-          type = input$graph_type
+          type = input$summary_type,
+          percentile = input$percentile
+          # start_date = input$daterange[1],
+          # end_date = input$daterange[2]
         )
       }
     }
@@ -151,8 +153,16 @@ server <- function(input, output) {
           store = input$store,
           start_date = input$daterange[1],
           end_date = input$daterange[2],
-          type = input$graph_type
+          type = input$summary_type,
+          percentile = input$percentile
         )
+    } else {
+      graph_store(
+        envdata(),
+        store = input$store,
+        start_date = input$daterange[1],
+        end_date = input$daterange[2]
+      )
     }
 
   })
@@ -225,9 +235,15 @@ server <- function(input, output) {
     downloadButton("prep_download_compgraph", "Download graphs (.zip)")
   })
   output$comp_table <- DT::renderDT(comp())
-  output$comp_graph <- renderPlot(graph_compliance(comp(), "B"))
-  output$comp_temp <- renderPlot(graph_compliance(comp(), "t"))
-  output$comp_RH <- renderPlot(graph_compliance(comp(), "R"))
+  output$comp_graph <- renderPlot(graph_compliance(envdata(), "o", standard = input$standard,
+                                                   start_date = input$daterange_comp[1],
+                                                   end_date = input$daterange_comp[2]))
+  output$comp_temp <- renderPlot(graph_compliance(envdata(), "t", standard = input$standard,
+                                 start_date = input$daterange_comp[1],
+                                 end_date = input$daterange_comp[2]))
+  output$comp_RH <- renderPlot(graph_compliance(envdata(), "r", standard = input$standard,
+                               start_date = input$daterange_comp[1],
+                               end_date = input$daterange_comp[2]))
 
 
   # Light data tab ----

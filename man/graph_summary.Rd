@@ -8,6 +8,7 @@ graph_summary(
   envdata,
   graph_title = FALSE,
   type = "monthly",
+  percentile = FALSE,
   store = FALSE,
   exclude_stores = FALSE,
   start_date = FALSE,

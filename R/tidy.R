@@ -108,7 +108,7 @@ subset_readings <- function(envdata,
                             exclude_stores = FALSE,
                             start_date = FALSE,
                             end_date = FALSE) {
-  subset <- envdata
+  subset <- dplyr::ungroup(envdata)
   if (store != FALSE) {
     subset <- dplyr::filter(subset, grepl(store, subset$location))
   }

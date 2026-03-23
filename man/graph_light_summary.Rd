@@ -12,6 +12,7 @@ graph_light_summary(
   start_date = FALSE,
   end_date = FALSE,
   type = "monthly",
+  percentile = FALSE,
   breaks = "2 months",
   date_format = "\%m/\%Y",
   max_lux = 50,

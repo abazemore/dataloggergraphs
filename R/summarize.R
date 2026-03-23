@@ -26,34 +26,34 @@ summarize_site <- function(envdata,
     exclude_stores = exclude_stores,
     start_date = start_date,
     end_date = end_date
-  )
+  ) |>
+    dplyr::ungroup()
+
   # Group by location and date to appropriate level
-  if (type == "all" | type == "annual") {
+  if (type == "annual") {
     subset <- dplyr::group_by(subset, site, location, year = lubridate::year(datetime))
   }
   if (type == "monthly") {
-    subset <- dplyr::group_by(
-      subset,
+    subset <- dplyr::group_by(subset,
       site,
       location,
       year = lubridate::year(datetime),
       month = lubridate::month(datetime)
     )
   }
-  # if (type == "weekly") {
-  #   subset <- dplyr::group_by(
-  #     subset,
-  #     site,
-  #     location,
-  #     year = lubridate::year(datetime),
-  #     month = lubridate::month(datetime),
-  #     week = lubridate::week(datetime)
-  #   )
-  #
-  # }
-  if (type == "daily") {
+  if (type == "weekly") {
     subset <- dplyr::group_by(
       subset,
+      site,
+      location,
+      year = lubridate::year(datetime),
+      month = lubridate::month(datetime),
+      week = lubridate::week(datetime)
+    )
+
+  }
+  if (type == "daily") {
+    subset <- dplyr::group_by(subset,
       site,
       location,
       year = lubridate::year(datetime),
@@ -61,8 +61,10 @@ summarize_site <- function(envdata,
       day = lubridate::day(datetime)
     )
   }
+
+  # Create base dataframe to join summary data
   site_summary <- dplyr::summarize(subset, .groups = "keep")
-  # If monitor type includes light data, include lux and UV columns
+
   if (!all(is.na(subset$temp))) {
     trh_summary <- dplyr::filter(subset, dplyr::when_any(!is.na(temp), !is.na(RH))) |>
       dplyr::summarize(
@@ -82,8 +84,10 @@ summarize_site <- function(envdata,
         range_trim_RH = round(p99_RH - p01_RH, 0.1),
         .groups = "keep"
       )
+
     site_summary <- dplyr::left_join(site_summary, trh_summary)
   }
+
   if (!all(is.na(subset$lux))) {
     light_summary <- dplyr::filter(subset, !is.na(lux)) |>
       dplyr::summarize(
@@ -98,6 +102,7 @@ summarize_site <- function(envdata,
       mean_UV = round(mean(UV, na.rm = TRUE), 0.1),
       .groups = "keep"
     )
+
     site_summary <- dplyr::left_join(site_summary, light_summary)
   }
   if (percentile == FALSE) {
@@ -225,9 +230,12 @@ compliance <- function(envdata,
                        min_RH = FALSE,
                        max_RH = FALSE) {
   message("Calculating compliance")
+
   subset <- subset_readings(envdata, exclude_stores = exclude_stores,
   start_date = start_date, end_date = end_date)
-
+  if (!"temp" %in% names(subset)) {
+    NULL
+  }
   minmax <- set_minmax(standard, min_temp, max_temp, min_RH, max_RH)
   start_period = min(subset$datetime)
   end_period = max(subset$datetime)
