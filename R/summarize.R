@@ -2,17 +2,17 @@
 
 # Summary by location
 
-#" Summarize environmental data with maximum, minimum, range, median, and average temperature and RH. Optional 1-99th percentile.
-#"
-#" @param envdata A dataframe returned from parse_datalogger
-#" @param exclude_stores A string or list of stores to exclude from analysis
-#" @param start_date A string to use as minimum date
-#" @param end_date A string to use as maximum date
-#" @param type "annual", "monthly", or "daily"
-#"
-#" @returns site_summary A dataframe of summary statistics
-#"
-#" @examples dplyr::summarize_site(envdata, start_date = "2024-01-01", type = "annual")
+#' Summarize environmental data with maximum, minimum, range, median, and average temperature and RH. Optional 1-99th percentile.
+#'
+#' @param envdata A dataframe returned from parse_datalogger
+#' @param exclude_stores A string or list of stores to exclude from analysis
+#' @param start_date A string to use as minimum date
+#' @param end_date A string to use as maximum date
+#' @param type "annual", "monthly", or "daily"
+#'
+#' @returns site_summary A dataframe of summary statistics
+#' @export
+#' @examples dplyr::summarize_site(envdata, start_date = "2024-01-01", type = "annual")
 summarize_site <- function(envdata,
                            exclude_stores = FALSE,
                            start_date = FALSE,
@@ -111,16 +111,16 @@ summarize_site <- function(envdata,
   return(site_summary)
 }
 
-#" Calculate light dose and compare to blue wool standards
-#"
-#" @param envdata A dataframe returned from parse_datalogger
-#" @param start_date A string to use as a minimum date
-#" @param end_date A string to use as a maximum date
-#" @param obs_hour Number of observations logged per hour
-#"
-#" @returns dose A dataframe of the cumulative lux and UV hours with percent to just noticeable fade for BW standards
-#"
-#" @examples light_dose(envdata_light, obs_hour = 4)
+#' Calculate light dose and compare to blue wool standards
+#'
+#' @param envdata A dataframe returned from parse_datalogger
+#' @param start_date A string to use as a minimum date
+#' @param end_date A string to use as a maximum date
+#' @param obs_hour Number of observations logged per hour
+#'
+#' @returns dose A dataframe of the cumulative lux and UV hours with percent to just noticeable fade for BW standards
+#'
+#' @examples light_dose(envdata_light, obs_hour = 4)
 light_dose <- function(envdata,
                        start_date = FALSE,
                        end_date = FALSE,
@@ -146,16 +146,16 @@ light_dose <- function(envdata,
   return(dose)
 }
 
-#" Set minimum and maximum temp with standard or custom values
-#"
-#" @param standard Standard ("BS 4971", "PAS 198", "Icon", or "Bizot")
-#" @param min_temp Minimum temperature, overwrites standard if provided
-#" @param max_temp Maximum temperature, overwrites standard if provided
-#" @param min_RH Minimum RH, overwrites standard if provided
-#" @param max_RH Maximum RH, overwrites standard if provided
-#"
-#" @returns minmax A vector of minimum and maximum values for temp and RH
-#" @examples set_minmax(standard = "PAS 198", max_temp = 25)
+#' Set minimum and maximum temp with standard or custom values
+#'
+#' @param standard Standard ("BS 4971", "PAS 198", "Icon", or "Bizot")
+#' @param min_temp Minimum temperature, overwrites standard if provided
+#' @param max_temp Maximum temperature, overwrites standard if provided
+#' @param min_RH Minimum RH, overwrites standard if provided
+#' @param max_RH Maximum RH, overwrites standard if provided
+#'
+#' @returns minmax A vector of minimum and maximum values for temp and RH
+#' @examples set_minmax(standard = "PAS 198", max_temp = 25)
 set_minmax <- function(standard = "BS 4971",
                        min_temp = FALSE,
                        max_temp = FALSE,
@@ -206,20 +206,22 @@ set_minmax <- function(standard = "BS 4971",
   return(c(min_temp, max_temp, min_RH, max_RH))
 }
 
-#" Calculate standard compliance for each area
-#"
-#" @param envdata A dataframe returned from parse_datalogger.
-#" @param start_date A string to use as a minimum date.
-#" @param end_date A string to use as a maximum date.
-#" @param standard Standard ("BS 4971", "PAS 198", "Icon", or "Bizot").
-#" @param min_temp Minimum temperature, overwrites standard if provided.
-#" @param max_temp Maximum temperature, overwrites standard if provided.
-#" @param min_RH Minimum RH, overwrites standard if provided.
-#" @param max_RH Maximum RH, overwrites standard if provided.
-#"
-#" @returns rated A dataframe with overall standard compliance, percentage of time above and below, and mean temp and RH.
-#"
-#" @examples compliance(envdata, standard = "Icon")
+#' Calculate standard compliance for each area
+#'
+#' @param envdata A dataframe returned from parse_datalogger.
+#' @param start_date A string to use as a minimum date.
+#' @param end_date A string to use as a maximum date.
+#' @param standard Standard ("BS 4971", "PAS 198", "Icon", or "Bizot").
+#' @param min_temp Minimum temperature, overwrites standard if provided.
+#' @param max_temp Maximum temperature, overwrites standard if provided.
+#' @param min_RH Minimum RH, overwrites standard if provided.
+#' @param max_RH Maximum RH, overwrites standard if provided.
+#'
+#' @returns rated A dataframe with overall standard compliance, percentage of time above and below, and mean temp and RH.
+#'
+#' @export
+#'
+#' @examples compliance(envdata, standard = "Icon")
 compliance <- function(envdata,
                        exclude_stores = FALSE,
                        start_date = FALSE,

@@ -22,7 +22,8 @@ dmy_style <- lubridate::stamp('1 March 2021', orders = '%0d %B %Y')
 #' @param col_RH Colour for RH line, as named HTML colour or hex.
 #'
 #' @returns ggplot2 Object containing temperature and RH graph.
-#'
+#' @export
+#' @import ggplot2
 #' @examples graph_store(envdata_exhib, graph_title = 'Exhibition cases')
 graph_store <- function(envdata,
                         store = FALSE,
@@ -42,17 +43,19 @@ graph_store <- function(envdata,
                         col_temp = 'red',
                         col_RH = 'blue') {
   message('Graphing T&RH')
-  if(!"temp" %in% names(envdata) && "lux" %in% names(envdata)) {
-    graph_light(envdata,
-                        graph_title = graph_title,
-                        type = type,
-                        percentile = percentile,
-                        store = store,
-                        exclude_stores = exclude_stores,
-                        start_date = start_date,
-                        end_date = end_date,
-                        date_format = date_format,
-                        breaks = breaks)
+  if (!"temp" %in% names(envdata) && "lux" %in% names(envdata)) {
+    graph_light(
+      envdata,
+      graph_title = graph_title,
+      type = type,
+      percentile = percentile,
+      store = store,
+      exclude_stores = exclude_stores,
+      start_date = start_date,
+      end_date = end_date,
+      date_format = date_format,
+      breaks = breaks
+    )
   }
   subset <- subset_readings(
     envdata,
@@ -178,7 +181,8 @@ graph_store <- function(envdata,
 #' @param col_RH Colour for RH line, as named HTML colour or hex.
 #'
 #' @returns ggplot2 Object containing temperature and RH graph with mean line and min/max ribbons
-#'
+#' @export
+#' @import ggplot2
 #' @examples graph_summary(envdata_exhib, graph_title = 'Exhibition cases', type = 'daily')
 graph_summary <- function(envdata,
                           graph_title = FALSE,
@@ -200,17 +204,19 @@ graph_summary <- function(envdata,
                           col_temp = 'red',
                           col_RH = 'blue') {
   message('Graphing max/min/mean')
-  if(!"temp" %in% names(envdata) && "lux" %in% names(envdata)) {
-    graph_light_summary(envdata,
-                        graph_title = graph_title,
-                        type = type,
-                        percentile = percentile,
-                        store = store,
-                        exclude_stores = exclude_stores,
-                        start_date = start_date,
-                        end_date = end_date,
-                        date_format = date_format,
-                        breaks = breaks)
+  if (!"temp" %in% names(envdata) && "lux" %in% names(envdata)) {
+    graph_light_summary(
+      envdata,
+      graph_title = graph_title,
+      type = type,
+      percentile = percentile,
+      store = store,
+      exclude_stores = exclude_stores,
+      start_date = start_date,
+      end_date = end_date,
+      date_format = date_format,
+      breaks = breaks
+    )
   }
   trh_ratio <- (max_axis_RH / max_axis_temp)
   # Set min/max by standard where not specified
@@ -234,6 +240,7 @@ graph_summary <- function(envdata,
   # if (type == 'weekly') {
   #   site_summary <-  dplyr::mutate(site_summary, datetime = as.POSIXct(paste0(year, '-', week), format = '%Y-%m-%w'))
   # }
+
   if (type == 'monthly') {
     site_summary <-  dplyr::mutate(site_summary, datetime = as.POSIXct(paste0(year, '-', month, '-01'), format = '%Y-%m-%d'))
   }
@@ -272,83 +279,81 @@ graph_summary <- function(envdata,
   # Y scales 0-40º and 0-100%
   # Dotted lines indicate storage guidelines
   summary_graph <- ggplot(site_summary, mapping = aes(x = datetime, group = location)) +
-      geom_hline(
-        yintercept = minmax[1],
-        color = col_temp,
-        linetype = 'dotted',
-        alpha = 0.8
-      ) +
-      geom_hline(
-        yintercept = minmax[2],
-        color = col_temp,
-        linetype = 'dotted',
-        alpha = 0.8
-      ) +
-      geom_hline(
-        yintercept = minmax[3] / trh_ratio,
-        color = col_RH,
-        linetype = 'dotted',
-        alpha = 0.6
-      ) +
-      geom_hline(
-        yintercept = minmax[4] / trh_ratio,
-        color = col_RH,
-        linetype = 'dotted',
-        alpha = 0.6
-      ) +
-      geom_line(
-        aes(y = mean_temp),
-        color = col_temp,
-        linewidth = 0.25,
-        alpha = line_alpha
-      ) +
-      geom_ribbon(
-        aes(ymin = min_temp, ymax = max_temp),
-        fill = col_temp,
-        linewidth = 0.25,
-        alpha = 0.1
-      ) +
-      geom_line(
-        aes(y = mean_RH / trh_ratio),
-        color = col_RH,
-        linewidth = 0.25,
-        alpha = line_alpha
-      ) +
-      geom_ribbon(
-        aes(ymin = min_RH / trh_ratio, ymax = max_RH / trh_ratio),
-        fill = col_RH,
-        linewidth = 0.25,
-        alpha = 0.1
-      ) +
-      scale_x_datetime(
-        name = 'Date',
-        date_breaks = breaks,
-        date_labels = date_format
-      ) +
-      labs(title = graph_title, subtitle = graph_subtitle) +
-      scale_y_continuous(
-        name = 'Temperature (º C)',
-        limits = c(0, max_axis_temp),
-        sec.axis = sec_axis(
-          ~ . * trh_ratio,
-          name = 'Rel. Humidity (%)',
-          breaks = c(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
-        )
-      ) +
-      theme(
-        axis.title.y.left = element_text(color = col_temp),
-        axis.title.y.right = element_text(color = col_RH)
-      )
-
-
-  if(percentile == TRUE) {
-    summary_graph <- summary_graph +
+    geom_hline(
+      yintercept = minmax[1],
+      color = col_temp,
+      linetype = 'dotted',
+      alpha = 0.8
+    ) +
+    geom_hline(
+      yintercept = minmax[2],
+      color = col_temp,
+      linetype = 'dotted',
+      alpha = 0.8
+    ) +
+    geom_hline(
+      yintercept = minmax[3] / trh_ratio,
+      color = col_RH,
+      linetype = 'dotted',
+      alpha = 0.6
+    ) +
+    geom_hline(
+      yintercept = minmax[4] / trh_ratio,
+      color = col_RH,
+      linetype = 'dotted',
+      alpha = 0.6
+    ) +
+    geom_line(
+      aes(y = mean_temp),
+      color = col_temp,
+      linewidth = 0.25,
+      alpha = line_alpha
+    ) +
     geom_ribbon(
-      aes(ymin = p01_RH / trh_ratio, ymax = p99_RH / trh_ratio),
+      aes(ymin = min_temp, ymax = max_temp),
+      fill = col_temp,
+      linewidth = 0.25,
+      alpha = 0.1
+    ) +
+    geom_line(
+      aes(y = mean_RH / trh_ratio),
+      color = col_RH,
+      linewidth = 0.25,
+      alpha = line_alpha
+    ) +
+    geom_ribbon(
+      aes(ymin = min_RH / trh_ratio, ymax = max_RH / trh_ratio),
       fill = col_RH,
       linewidth = 0.25,
       alpha = 0.1
     ) +
+    scale_x_datetime(name = 'Date',
+                     date_breaks = breaks,
+                     date_labels = date_format) +
+    labs(title = graph_title, subtitle = graph_subtitle) +
+    scale_y_continuous(
+      name = 'Temperature (º C)',
+      limits = c(0, max_axis_temp),
+      sec.axis = sec_axis(
+        ~ . * trh_ratio,
+        name = 'Rel. Humidity (%)',
+        breaks = c(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
+      )
+    ) +
+    theme(
+      axis.title.y.left = element_text(color = col_temp),
+      axis.title.y.right = element_text(color = col_RH)
+    )
+
+
+  if (percentile == TRUE) {
+    summary_graph <- summary_graph +
+      geom_ribbon(
+        aes(ymin = p01_RH / trh_ratio, ymax = p99_RH / trh_ratio),
+        fill = col_RH,
+        linewidth = 0.25,
+        alpha = 0.1
+      ) +
       geom_ribbon(
         aes(ymin = p01_temp, ymax = p99_temp),
         fill = col_temp,
@@ -376,7 +381,8 @@ graph_summary <- function(envdata,
 #' @param col_UV Colour for UV line, as named HTML colour or hex.
 #'
 #' @returns ggplot2 Object containing visible light and UV graph
-#'
+#' @export
+#' @import ggplot2
 #' @examples graph_light(envdata_exhib, graph_title = 'Exhibition cases')
 graph_light <- function(envdata,
                         store = FALSE,
@@ -465,7 +471,7 @@ graph_light <- function(envdata,
       labs(title = graph_title, subtitle = graph_subtitle) +
       scale_y_continuous(
         name = 'Visible light (lux)',
-        sec.axis = sec_axis( ~ . / max(subset$lux), name = 'UV (μW/lumen)')
+        sec.axis = sec_axis(~ . / max(subset$lux), name = 'UV (μW/lumen)')
       ) +
       theme(
         axis.title.y.left = element_text(color = col_lux),
@@ -491,7 +497,8 @@ graph_light <- function(envdata,
 #' @param col_UV Colour for UV line and ribbon, as named HTML colour or hex.
 #'
 #' @returns ggplot2 Object containing visible light and UV graph with mean and min/max ribbons
-#'
+#' @export
+#' @import ggplot2
 #' @examples graph_light_summary(envdata_exhib, graph_title = 'Exhibition cases', type = 'daily')
 graph_light_summary <- function(envdata,
                                 graph_title = FALSE,
@@ -549,10 +556,12 @@ graph_light_summary <- function(envdata,
       linetype = 'dotted',
       alpha = 0.8
     ) +
-    geom_line(aes(y = mean_lux),
-              color = col_lux,
-              linewidth = 0.25,
-              alpha = line_alpha) +
+    geom_line(
+      aes(y = mean_lux),
+      color = col_lux,
+      linewidth = 0.25,
+      alpha = line_alpha
+    ) +
     geom_ribbon(
       aes(ymin = min_lux, ymax = max_lux),
       fill = col_lux,
@@ -583,21 +592,21 @@ graph_light_summary <- function(envdata,
 
 
 
-if(percentile == TRUE) {
-  summary_graph <- summary_graph +
-    geom_ribbon(
-      aes(ymin = p01_lux, ymax = p99_lux),
-      fill = col_lux,
-      linewidth = 0.25,
-      alpha = 0.1
-    ) +
-    geom_ribbon(
-      aes(ymin = p01_UV, ymax = p99_UV),
-      fill = col_UV,
-      linewidth = 0.25,
-      alpha = 0.1
-    )
-}
+  if (percentile == TRUE) {
+    summary_graph <- summary_graph +
+      geom_ribbon(
+        aes(ymin = p01_lux, ymax = p99_lux),
+        fill = col_lux,
+        linewidth = 0.25,
+        alpha = 0.1
+      ) +
+      geom_ribbon(
+        aes(ymin = p01_UV, ymax = p99_UV),
+        fill = col_UV,
+        linewidth = 0.25,
+        alpha = 0.1
+      )
+  }
   summary_graph
 }
 
@@ -622,7 +631,8 @@ if(percentile == TRUE) {
 #' @param grad_good Colour of high end of gradient for overall graph, as named HTML colour or hex.
 #'
 #' @returns ggplot2 Object containing bar graph of overall or temp/RH rating for each space in dataframe
-#'
+#' @export
+#' @import ggplot2
 #' @examples graph_compliance(envdata, 't', standard = 'Icon')
 graph_compliance <- function(envdata,
                              type = 'o',
@@ -815,7 +825,8 @@ graph_compliance <- function(envdata,
 #' @param col_line Colour for vertical line at splice date
 #'
 #' @returns ggplot2 Object containing temp and RH graph of two sets of data spliced on `move_date`.
-#'
+#' @export
+#' @import ggplot2
 #' @examples graph_move(envdata_old, envdata_new, store1 = 'Archive 1', store2 = 'Archive A', move_date = '2025-01-01')
 graph_move <- function(envdata1,
                        envdata2,
@@ -891,13 +902,17 @@ graph_move <- function(envdata1,
       ) +
       geom_vline(xintercept = as.POSIXct(move_date), color = col_line) +
       geom_line(aes(y = temp), color = col_temp, linewidth = 0.25) +
-      geom_line(aes(y = RH / trh_ratio), color = col_RH, linewidth = 0.25) +
+      geom_line(
+        aes(y = RH / trh_ratio),
+        color = col_RH,
+        linewidth = 0.25
+      ) +
       scale_x_datetime(name = 'Date') +
       labs(title = graph_title, subtitle = graph_subtitle) +
       scale_y_continuous(
         name = 'Temperature (º C)',
         limits = c(0, max_axis_temp),
-        sec.axis = sec_axis(~ . * trh_ratio, name = 'Rel. Humidity (%)')
+        sec.axis = sec_axis( ~ . * trh_ratio, name = 'Rel. Humidity (%)')
       ) +
       theme(
         axis.title.y.left = element_text(color = col_temp),

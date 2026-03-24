@@ -146,7 +146,8 @@ test_that("Hanwell file has correct number of columns and rows",
           {
             envdata <- parse_hanwell(test_path("fixtures", "hanwell", "Hanwell_1.csv"))
             expect_equal(nrow(envdata), 10)
-            expect_equal(names(envdata), c('site', 'location', 'datetime', 'temp', 'RH', 'model', 'serial'))
+            expect_equal(names(envdata),
+                         c('site', 'location', 'datetime', 'temp', 'RH', 'model', 'serial'))
           })
 
 test_that("Hanwell file has no NA values", {
@@ -160,7 +161,8 @@ test_that("Hanwell file has correct date format", {
     test_path("fixtures", "hanwell", "Hanwell_1.csv")
   )[3], 1),
   tidyr::tibble(
-    "datetime" = lubridate::parse_date_time("2025-11-21 00:00:00", tz = "UTC", orders = "Ymd HMS")
+    "datetime" = lubridate::parse_date_time("2025-11-21 00:00:00",
+                                            tz = "UTC", orders = "Ymd HMS")
   ))
 })
 
@@ -170,9 +172,11 @@ test_that("Pre-Gingerbread Meaco file has correct columns and rows with no NA va
             envdata <- parse_meaco(test_path("fixtures", "meaco", "Meaco_1.csv"))
             expect_equal(nrow(envdata), 10)
             if("temp" %in% names(envdata)) {
-              expect_equal(names(envdata), c('site', 'location', 'datetime', 'temp', 'RH', 'model', 'serial'))
+              expect_equal(names(envdata),
+                           c('site', 'location', 'datetime', 'temp', 'RH', 'model', 'serial'))
             } else {
-              expect_equal(names(envdata), c('site', 'location', 'datetime', 'lux', 'UV', 'lux', 'UV', 'model', 'serial'))
+              expect_equal(names(envdata),
+                           c('site', 'location', 'datetime', 'lux', 'UV', 'lux', 'UV', 'model', 'serial'))
             }
           })
 
@@ -185,7 +189,8 @@ test_that("Pre-Gingerbread Meaco file has correct date format", {
     test_path("fixtures", "meaco", "Meaco_1.csv")
   )[3], 1),
   tidyr::tibble(
-    "datetime" = lubridate::parse_date_time("2025-11-06 15:59:00", tz = "UTC", orders = "Ymd HMS")
+    "datetime" = lubridate::parse_date_time("2025-11-06 15:59:00",
+                                            tz = "UTC", orders = "Ymd HMS")
   ))
 })
 
@@ -203,23 +208,28 @@ test_that("Gingerbread Meaco file has no NA values", {
 test_that("Gingerbread Meaco file has correct date format", {
   expect_equal(head(parse_meaco(
     test_path("fixtures", "meaco", "Meaco_3.csv")
-  )[3], 1), tidyr::tibble("datetime" = lubridate::parse_date_time("2025-12-31 00:04:00", tz = "UTC", orders = "Ymd HMS")))
+  )[3], 1), tidyr::tibble("datetime" =
+                            lubridate::parse_date_time("2025-12-31 00:04:00",
+                                                       tz = "UTC", orders = "Ymd HMS")))
 })
 
 # # parse_miniclima ----
 test_that("miniClima file has correct number of columns and rows with no NA values",
           {
-            envdata <- parse_miniclima(test_path("fixtures", "miniclima", "Anonymous Library L - A1.csv"))
+            envdata <- parse_miniclima(
+              test_path("fixtures", "miniclima", "Anonymous Library L - A1.csv"))
             expect_equal(nrow(envdata), 10)
             expect_equal(names(envdata),
                          c('site', 'location', 'datetime', 'temp', 'RH', 'model', 'serial'))
             expect_equal(sum(is.na(envdata)), 0)
           })
 test_that("miniClima file has correct date format", {
-  expect_equal(head(envdata <- parse_miniclima(test_path("fixtures", "miniclima", "Anonymous Library L - A1.csv"))
+  expect_equal(head(envdata <- parse_miniclima(
+    test_path("fixtures", "miniclima", "Anonymous Library L - A1.csv"))
   [3], 1),
   tidyr::tibble(
-    "datetime" = lubridate::parse_date_time("2025-08-07 00:00:00", tz = "UTC", orders = 'Ymd HMS')
+    "datetime" = lubridate::parse_date_time("2025-08-07 00:00:00",
+                                            tz = "UTC", orders = 'Ymd HMS')
   ))
 })
 
@@ -235,7 +245,8 @@ test_that("Previous csv file has correct number of columns and rows with no NA v
 test_that("Previous csv file has correct date format", {
   expect_equal(head(parse_previous(test_path("fixtures", "previous", "sample_data.csv"))[3], 1),
   tidyr::tibble(
-    "datetime" = lubridate::parse_date_time("2021-09-01 01:00:00", tz = "UTC", orders = 'Ymd HMS')
+    "datetime" = lubridate::parse_date_time("2021-09-01 01:00:00",
+                                            tz = "UTC", orders = 'Ymd HMS')
   ))
 })
 
@@ -277,7 +288,8 @@ test_that("Rotronic tsv file has correct date format", {
     test_path("fixtures", "rotronic", "Rotronic_2.xls")
   )[3], 1),
   tidyr::tibble(
-    "datetime" = lubridate::parse_date_time("2020-01-24 13:08:35", tz = "UTC", orders = "Ymd HMS")
+    "datetime" = lubridate::parse_date_time("2020-01-24 13:08:35",
+                                            tz = "UTC", orders = "Ymd HMS")
   ))
 })
 
@@ -327,7 +339,8 @@ test_that("TinyTag file has correct date format", {
     test_path("fixtures", "tinytag", "TinyTag_1.csv")
   )[3], 1),
   tidyr::tibble(
-    "datetime" = lubridate::parse_date_time("2021-07-26 14:26:00", tz = "UTC", orders = "Ymd HMS")
+    "datetime" = lubridate::parse_date_time("2021-07-26 14:26:00",
+                                            tz = "UTC", orders = "Ymd HMS")
   ))
 })
 
@@ -354,6 +367,7 @@ test_that("TrendBMS file has correct date format", {
     test_path("fixtures", "trend", "Trend_1.csv")
   )[3], 1),
   tidyr::tibble(
-    "datetime" = lubridate::parse_date_time("2021-09-01 00:30:00", tz = "UTC", orders = "Ymd HMS")
+    "datetime" = lubridate::parse_date_time("2021-09-01 00:30:00",
+                                            tz = "UTC", orders = "Ymd HMS")
   ))
 })
