@@ -1,18 +1,12 @@
 library(shiny)
 
-# source("parse.R")
-# source("tidy.R")
-# source("summarize.R")
-# source("graph.R")
-
 # Define server function
 server <- function(input, output) {
   # Tab 1: Load files and parse ----
 
   envdata <- reactive({
     if (input$sample == TRUE) {
-      parse_brand("../tests/testthat/fixtures/previous/sample_data.csv",
-                  brand = "previous")
+      dataloggergraphs::sample_data
     } else if (length(input$files) > 0) {
       parse_brand(input$files,
                   brand = input$brand,

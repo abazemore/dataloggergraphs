@@ -1,17 +1,19 @@
 # Parse files ----
-#" parse_brand
-#"
-#" @description
-#" A central function to route to the appropriate specific logger extraction function
-#"
-#" @param filepath Path to a directory of logfiles of the same brand
-#" @param site The site name used for each row as a string for any brand other than Meaco
-#" @param brand The logger brand in lowercase
-#" @param model Optional, the model as a string for brands that do not include the model in the file. Not required for TinyTag
-#"
-#" @returns envdata, a standard format dataframe to use with other functions
-#"
-#" @examples parse_datalogger("/data/tinytag/2025-01-01_to_2025-02-01.csv", "Anonymous Library", "tinytag")
+#' parse_brand
+#'
+#' @description
+#' A central function to route to the appropriate specific logger extraction function
+#'
+#' @param filepath Path to a directory of logfiles of the same brand
+#' @param site The site name used for each row as a string for any brand other than Meaco
+#' @param brand The logger brand in lowercase
+#' @param model Optional, the model as a string for brands that do not include the model in the file. Not required for TinyTag
+#'
+#' @returns envdata, a standard format dataframe to use with other functions
+#'
+#' @export
+#'
+#' @examples parse_datalogger("/data/tinytag/2025-01-01_to_2025-02-01.csv", "Anonymous Library", "tinytag")
 parse_brand <- function (filepath,
                          brand = FALSE,
                          site = "",
@@ -74,16 +76,16 @@ parse_brand <- function (filepath,
   envdata
 }
 
-#" Parse Hanwell file
-#"
-#" @param filepath path to .csv logfile
-#" @param site The site name used for each row
-#" @param model Model of logger, not recoverable from file
-#" @param location Location of logger, not recoverable from file
-#"
-#" @returns envdata, a dataframe in a standard format used by other functions in this package
-#"
-#" @noRd
+#' Parse Hanwell file
+#'
+#' @param filepath path to .csv logfile
+#' @param site The site name used for each row
+#' @param model Model of logger, not recoverable from file
+#' @param location Location of logger, not recoverable from file
+#'
+#' @returns envdata, a dataframe in a standard format used by other functions in this package
+#'
+#' @noRd
 parse_hanwell <- function(filepath,
                           site = "",
                           location = "",
@@ -129,15 +131,15 @@ parse_hanwell <- function(filepath,
 }
 
 
-#" Parse Meaco file
-#"
-#" @param filepath path to .csv logfile
-#" @param site The site name used for each row
-#" @param model Model of logger, not recoverable from file
-#"
-#" @returns envdata, a dataframe in a standard format used by other functions in this package
-#"
-#" @noRd
+#' Parse Meaco file
+#'
+#' @param filepath path to .csv logfile
+#' @param site The site name used for each row
+#' @param model Model of logger, not recoverable from file
+#'
+#' @returns envdata, a dataframe in a standard format used by other functions in this package
+#'
+#' @noRd
 parse_meaco <- function(filepath,
                         site = "",
                         model = "Meaco") {
@@ -247,15 +249,15 @@ parse_meaco <- function(filepath,
   })
 }
 
-#" Parse miniClima file
-#"
-#" @param filepath .csv logfile.
-#" @param site The site name used for each row.
-#" @param model Model of logger, not recoverable from file.
-#"
-#" @returns envdata, a dataframe in a standard format used by other functions in this package
-#"
-#" @noRd
+#' Parse miniClima file
+#'
+#' @param filepath .csv logfile.
+#' @param site The site name used for each row.
+#' @param model Model of logger, not recoverable from file.
+#'
+#' @returns envdata, a dataframe in a standard format used by other functions in this package
+#'
+#' @noRd
 parse_miniclima <- function(filepath,
                             site = "",
                             model = "miniClima",
@@ -317,13 +319,13 @@ parse_miniclima <- function(filepath,
 }
 
 
-#" Parse previously processed file
-#"
-#" @param filepath .csv of envdata
-#"
-#" @returns envdata, a dataframe in a standard format used by other functions in this package
-#"
-#" @noRd
+#' Parse previously processed file
+#'
+#' @param filepath .csv of envdata
+#'
+#' @returns envdata, a dataframe in a standard format used by other functions in this package
+#'
+#' @noRd
 parse_previous <- function(filepath) {
   tryCatch({
     message("Parsing as previously processed")
@@ -346,15 +348,15 @@ parse_previous <- function(filepath) {
   })
 }
 
-#" Parse Rotronic file
-#"
-#" @param filepath .csv or .xls logfile.
-#" @param site The site name used for each row.
-#" @param model Model of logger, not recoverable from file.
-#"
-#" @returns envdata, a dataframe in a standard format used by other functions in this package
-#"
-#" @noRd
+#' Parse Rotronic file
+#'
+#' @param filepath .csv or .xls logfile.
+#' @param site The site name used for each row.
+#' @param model Model of logger, not recoverable from file.
+#'
+#' @returns envdata, a dataframe in a standard format used by other functions in this package
+#'
+#' @noRd
 parse_rotronic <- function(filepath,
                            site = "",
                            model = "Rotronic") {
@@ -428,15 +430,15 @@ parse_rotronic <- function(filepath,
   })
 }
 
-#" Parse T&D file
-#"
-#" @param filepath .csv logfile.
-#" @param site The site name used for each row.
-#" @param model Model of logger, not recoverable from file.
-#"
-#" @returns envdata, a dataframe in a standard format used by other functions in this package
-#"
-#" @noRd
+#' Parse T&D file
+#'
+#' @param filepath .csv logfile.
+#' @param site The site name used for each row.
+#' @param model Model of logger, not recoverable from file.
+#'
+#' @returns envdata, a dataframe in a standard format used by other functions in this package
+#'
+#' @noRd
 parse_tandd <- function(filepath,
                         site = "",
                         model = "") {
@@ -507,14 +509,14 @@ parse_tandd <- function(filepath,
   })
 }
 
-#" parse_tinytag
-#"
-#" @param filepath .csv logfile exported from TinyTag Explorer
-#" @param site The site name used for each row, string
-#"
-#" @returns envdata, a dataframe in a standard format used by other functions in this package
-#"
-#" @noRd
+#' parse_tinytag
+#'
+#' @param filepath .csv logfile exported from TinyTag Explorer
+#' @param site The site name used for each row, string
+#'
+#' @returns envdata, a dataframe in a standard format used by other functions in this package
+#'
+#' @noRd
 parse_tinytag <- function(filepath, site = "") {
   message("Parsing as Tinytag")
   tryCatch({
@@ -564,15 +566,15 @@ parse_tinytag <- function(filepath, site = "") {
 }
 
 
-#" Parse Trend BMS file
-#"
-#" @param filepath .csv logfile.
-#" @param site The site name used for each row.
-#" @param model Model of logger, not recoverable from file.
-#"
-#" @returns envdata, a dataframe in a standard format used by other functions in this package. temp or RH will be NA.
-#"
-#" @noRd
+#' Parse Trend BMS file
+#'
+#' @param filepath .csv logfile.
+#' @param site The site name used for each row.
+#' @param model Model of logger, not recoverable from file.
+#'
+#' @returns envdata, a dataframe in a standard format used by other functions in this package. temp or RH will be NA.
+#'
+#' @noRd
 parse_trend <- function(filepath,
                         site = "",
                         model = "Trend BMS", keep_number = TRUE) {

@@ -78,14 +78,14 @@ if ("temp" %in% names(envdata)) {
 
 #' Remove potentially faulty readings outside range
 #'
-#' @param envdata A dataframe returned from parse_datalogger
+#' @param envdata A dataframe returned from parse_brand
 #' @param min_temp A number for the minimum realistic temperature
 #' @param max_temp A number for the maximum realistic temperature
 #' @param min_RH A number for the minimum realistic RH
 #' @param max_RH A number for the maximum realistic RH
 #'
 #' @returns subset A dataframe with rows out of range removed
-#'
+#' @export
 #' @examples remove_faulty(envdata, max_RH = 70)
 remove_faulty <- function(envdata,
                           min_temp = -25,
@@ -103,6 +103,18 @@ remove_faulty <- function(envdata,
   subset
 }
 
+#' Subset readings
+#'
+#' @param envdata Dataframe returned from parse_brand
+#' @param store Store name or pattern to match in the location
+#' @param exclude_stores Store name or pattern in the location to filter out
+#' @param start_date Date in "YYYY-mm-dd" format
+#' @param end_date Date in "YYYY-mm-dd" format
+#'
+#' @returns subset, a filtered dataframe
+#' @export
+#'
+#' @examples subset_readings(envdata, store = "C", start_date = "2024-01-01", end_date = "2024-12-31")
 subset_readings <- function(envdata,
                             store = FALSE,
                             exclude_stores = FALSE,
