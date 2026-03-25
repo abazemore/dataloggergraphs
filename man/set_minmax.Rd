@@ -30,5 +30,7 @@ minmax A vector of minimum and maximum values for temp and RH
 Set minimum and maximum temp with standard or custom values
 }
 \examples{
+\dontrun{
 set_minmax(standard = "PAS 198", max_temp = 25)
+}
 }

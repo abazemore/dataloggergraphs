@@ -1,4 +1,5 @@
 library(shiny)
+devtools::install_github("abazemore/dataloggergraphs")
 
 # Define server function
 server <- function(input, output) {
@@ -29,7 +30,7 @@ server <- function(input, output) {
                      ".csv")
     },
     content = function(file) {
-      write.csv(envdata(), file)
+      utils::write.csv(envdata(), file)
     }
   )
   # Only show download button when data is available
@@ -60,7 +61,7 @@ server <- function(input, output) {
                      ".csv")
     },
     content = function(file) {
-      write.csv(site_summary(), file)
+      utils::write.csv(site_summary(), file)
     }
   )
   # Only show download button when data is available
@@ -200,7 +201,7 @@ server <- function(input, output) {
       )
     },
     content = function(file) {
-      write.csv(comp(), file)
+      utils::write.csv(comp(), file)
     }
   )
   # Only show download button when data is available
@@ -220,7 +221,7 @@ server <- function(input, output) {
                      ".csv")
     },
     content = function(file) {
-      write.csv(comp(), file)
+      utils::write.csv(comp(), file)
     }
   )
   # Only show download button when data is available

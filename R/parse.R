@@ -7,13 +7,17 @@
 #' @param filepath Path to a directory of logfiles of the same brand
 #' @param site The site name used for each row as a string for any brand other than Meaco
 #' @param brand The logger brand in lowercase
-#' @param model Optional, the model as a string for brands that do not include the model in the file. Not required for TinyTag
-#'
-#' @returns envdata, a standard format dataframe to use with other functions
+#' @param model Model as a string for brands that do not include the model in the file. Not required for TinyTag
+#' @param location Location of the logger if not recoverable from the file
+#' @param old_data Dataframe containing previously parsed data to append
 #'
 #' @export
 #'
-#' @examples parse_datalogger("/data/tinytag/2025-01-01_to_2025-02-01.csv", "Anonymous Library", "tinytag")
+#' @examples
+#' \dontrun{
+#'  parse_datalogger("/data/tinytag/2025-01-01_to_2025-02-01.csv",
+#' "Anonymous Library", "tinytag")
+#' }
 parse_brand <- function (filepath,
                          brand = FALSE,
                          site = "",
@@ -83,7 +87,7 @@ parse_brand <- function (filepath,
 #' @param model Model of logger, not recoverable from file
 #' @param location Location of logger, not recoverable from file
 #'
-#' @returns envdata, a dataframe in a standard format used by other functions in this package
+#' @inherit parse_brand
 #'
 #' @noRd
 parse_hanwell <- function(filepath,
@@ -133,11 +137,8 @@ parse_hanwell <- function(filepath,
 
 #' Parse Meaco file
 #'
-#' @param filepath path to .csv logfile
-#' @param site The site name used for each row
-#' @param model Model of logger, not recoverable from file
+#' @inherit parse_hanwell
 #'
-#' @returns envdata, a dataframe in a standard format used by other functions in this package
 #'
 #' @noRd
 parse_meaco <- function(filepath,
@@ -251,9 +252,7 @@ parse_meaco <- function(filepath,
 
 #' Parse miniClima file
 #'
-#' @param filepath .csv logfile.
-#' @param site The site name used for each row.
-#' @param model Model of logger, not recoverable from file.
+#' @inheritParams parse_hanwell
 #'
 #' @returns envdata, a dataframe in a standard format used by other functions in this package
 #'
@@ -452,8 +451,10 @@ parse_tandd <- function(filepath,
       col_types = readr::cols()
     )
     if (stringr::str_detect(filepath, "([A-Z0-9]){8}")) {
-      location <- stringr::str_extract(filepath, "(?<=/).*?(?= ([A-Z0-9]){8})")
-      serial = stringr::str_extract(filepath, "([A-Z0-9]){8}")
+      location <- stringr::str_extract(stringr::str_replace(filepath, "_", " "), "(?<=/).*?(?= ([A-Z0-9]){8})") |>
+        tidyr::replace_na("Location unknown")
+      serial = stringr::str_extract(filepath, "([A-Z0-9]){8}") |>
+        tidyr::replace_na("")
     }
     else{
       serial <- ""
@@ -542,7 +543,7 @@ parse_tinytag <- function(filepath, site = "") {
           stringr::str_extract_all(temp, "[:digit:]+\\.[:digit:]+")
         ),
         RH = as.numeric(stringr::str_extract_all(RH, "[:digit:]+\\.[:digit:]+")),
-        model = as.character(stringr::str_remove(file_head$temp[3], " H�C/%RH")),
+        model = as.character(stringr::str_remove(file_head$temp[3], " H\uFFFDC/%RH")),
         serial = as.character(file_head$temp[2]),
         .keep = "none"
       )  |>

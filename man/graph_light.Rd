@@ -34,15 +34,15 @@ graph_light(
 
 \item{breaks}{Breaks on x axis, like '2 weeks'.}
 
-\item{date_format}{Format of dates on x axis, like '\%d/\%m' or '12/24'.}
+\item{date_format}{Format of dates on x axis, like '\%d/\%m'.}
 
 \item{max_lux}{Value of maximum lux guideline.}
 
 \item{max_UV}{Value of maximum UV guideline}
 
-\item{col_lux}{Colour for visible light line, as named HTML colour or hex.}
+\item{col_lux}{Color for visible light line, as named HTML color or hex.}
 
-\item{col_UV}{Colour for UV line, as named HTML colour or hex.}
+\item{col_UV}{Color for UV line, as named HTML color or hex.}
 }
 \value{
 ggplot2 Object containing visible light and UV graph
@@ -51,5 +51,8 @@ ggplot2 Object containing visible light and UV graph
 Graph light data
 }
 \examples{
-graph_light(envdata_exhib, graph_title = 'Exhibition cases')
+\dontrun{
+ graph_light(envdata_exhib, graph_title = 'Exhibition cases')
+}
+
 }

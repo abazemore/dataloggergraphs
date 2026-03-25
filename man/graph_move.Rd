@@ -38,7 +38,7 @@ graph_move(
 
 \item{move_date}{Date to splice data}
 
-\item{graph_title}{Title of graph, otherwise 'Store 1 to Store 2'.}
+\item{graph_title}{Title of graph, else 'All stores at site' or first location if \code{store} specified.}
 
 \item{start_date}{A string to use as minimum date.}
 
@@ -62,11 +62,11 @@ graph_move(
 
 \item{max_axis_RH}{Maximum of RH axis.}
 
-\item{col_temp}{Colour for temperature line, as named HTML colour or hex.}
+\item{col_temp}{Color for temperature line, as named HTML color or hex.}
 
-\item{col_RH}{Colour for RH line, as named HTML colour or hex.}
+\item{col_RH}{Color for RH line, as named HTML color or hex.}
 
-\item{col_line}{Colour for vertical line at splice date}
+\item{col_line}{Color of the line marking the move date as a named HTML color or hex code}
 }
 \value{
 ggplot2 Object containing temp and RH graph of two sets of data spliced on \code{move_date}.
@@ -75,5 +75,9 @@ ggplot2 Object containing temp and RH graph of two sets of data spliced on \code
 Splice temp and RH graph on specified date
 }
 \examples{
-graph_move(envdata_old, envdata_new, store1 = 'Archive 1', store2 = 'Archive A', move_date = '2025-01-01')
+\dontrun{
+ graph_move(envdata_old, envdata_new,
+store1 = 'Archive 1', store2 = 'Archive A',
+move_date = '2025-01-01')
+}
 }

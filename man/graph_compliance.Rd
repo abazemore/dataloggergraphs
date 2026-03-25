@@ -25,7 +25,7 @@ graph_compliance(
 )
 }
 \arguments{
-\item{envdata}{A dataframe returned from parse_datalogger}
+\item{envdata}{A dataframe returned from parse_datalogger.}
 
 \item{type}{'o' for overall graph, 't' for temperature, or 'r' for RH.}
 
@@ -47,17 +47,17 @@ graph_compliance(
 
 \item{max_RH}{Maximum RH guideline.}
 
-\item{col_low}{Colour of low bar for temp or RH graph, as named HTML colour or hex.}
+\item{col_low}{Color of low bar for temp or RH graph, as named HTML color or hex.}
 
-\item{col_good}{Colour of good bar for temp or RH graph, as named HTML colour or hex.}
+\item{col_good}{Color of good bar for temp or RH graph, as named HTML color or hex.}
 
-\item{col_high}{Colour of high bar for temp or RH graph, as named HTML colour or hex.}
+\item{col_high}{Color of high bar for temp or RH graph, as named HTML color or hex.}
 
-\item{grad_bad}{Colour of low end of gradient for overall graph, as named HTML colour or hex.}
+\item{grad_bad}{Color of low end of gradient for overall graph, as named HTML color or hex.}
 
-\item{grad_mid}{Colour of midpoint of gradient for overall graph, as named HTML colour or hex.}
+\item{grad_mid}{Color of midpoint of gradient for overall graph, as named HTML color or hex.}
 
-\item{grad_good}{Colour of high end of gradient for overall graph, as named HTML colour or hex.}
+\item{grad_good}{Color of high end of gradient for overall graph, as named HTML color or hex.}
 }
 \value{
 ggplot2 Object containing bar graph of overall or temp/RH rating for each space in dataframe
@@ -66,5 +66,7 @@ ggplot2 Object containing bar graph of overall or temp/RH rating for each space 
 Graph standard compliance
 }
 \examples{
-graph_compliance(envdata, 't', standard = 'Icon')
+\dontrun{
+ graph_compliance(envdata, 't', standard = 'Icon')
+}
 }

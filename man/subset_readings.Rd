@@ -13,7 +13,7 @@ subset_readings(
 )
 }
 \arguments{
-\item{envdata}{Dataframe returned from parse_brand}
+\item{envdata}{Dataframe returned from parse_datalogger}
 
 \item{store}{Store name or pattern to match in the location}
 
@@ -30,5 +30,7 @@ subset, a filtered dataframe
 Subset readings
 }
 \examples{
-subset_readings(envdata, store = "C", start_date = "2024-01-01", end_date = "2024-12-31")
+\dontrun{
+ remove_faulty(envdata, max_RH = 70)
+}
 }

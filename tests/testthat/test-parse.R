@@ -217,7 +217,7 @@ test_that("Gingerbread Meaco file has correct date format", {
 test_that("miniClima file has correct number of columns and rows with no NA values",
           {
             envdata <- parse_miniclima(
-              test_path("fixtures", "miniclima", "Anonymous Library L - A1.csv"))
+              test_path("fixtures", "miniclima", "miniClima_1.csv"))
             expect_equal(nrow(envdata), 10)
             expect_equal(names(envdata),
                          c('site', 'location', 'datetime', 'temp', 'RH', 'model', 'serial'))
@@ -225,7 +225,7 @@ test_that("miniClima file has correct number of columns and rows with no NA valu
           })
 test_that("miniClima file has correct date format", {
   expect_equal(head(envdata <- parse_miniclima(
-    test_path("fixtures", "miniclima", "Anonymous Library L - A1.csv"))
+    test_path("fixtures", "miniclima", "miniClima_1.csv"))
   [3], 1),
   tidyr::tibble(
     "datetime" = lubridate::parse_date_time("2025-08-07 00:00:00",

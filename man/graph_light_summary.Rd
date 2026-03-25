@@ -34,19 +34,21 @@ graph_light_summary(
 
 \item{end_date}{A string to use as maximum date.}
 
-\item{type}{'annual', 'monthly', or 'daily'}
+\item{type}{Summary interval, "annual", "monthly", or "daily"}
+
+\item{percentile}{Boolean to show 1-99th percentile ribbon}
 
 \item{breaks}{Breaks on x axis, like '2 weeks'.}
 
-\item{date_format}{Format of dates on x axis, like '\%d/\%m' or '12/24'.}
+\item{date_format}{Format of dates on x axis, like '\%d/\%m'.}
 
 \item{max_lux}{Value of maximum lux guideline.}
 
 \item{max_UV}{Value of maximum UV guideline}
 
-\item{col_lux}{Colour for visible light line and ribbon, as named HTML colour or hex.}
+\item{col_lux}{Color for visible light line, as named HTML color or hex.}
 
-\item{col_UV}{Colour for UV line and ribbon, as named HTML colour or hex.}
+\item{col_UV}{Color for UV line, as named HTML color or hex.}
 }
 \value{
 ggplot2 Object containing visible light and UV graph with mean and min/max ribbons
@@ -55,5 +57,7 @@ ggplot2 Object containing visible light and UV graph with mean and min/max ribbo
 Graph light data summary
 }
 \examples{
+\dontrun{
 graph_light_summary(envdata_exhib, graph_title = 'Exhibition cases', type = 'daily')
+}
 }

@@ -1,6 +1,7 @@
 #' Combine data from lapply list and match separate temperature and humidity files
 #'
 #' @param datalist A list of parsed dataframes
+#' @param old_data A dataframe containing previously parsed data
 #'
 #' @returns envdata A dataframe containing all rows in `datalist`, with combined temperature and RH files from Trend
 #'
@@ -78,7 +79,7 @@ if ("temp" %in% names(envdata)) {
 
 #' Remove potentially faulty readings outside range
 #'
-#' @param envdata A dataframe returned from parse_brand
+#' @param envdata Dataframe returned from parse_datalogger
 #' @param min_temp A number for the minimum realistic temperature
 #' @param max_temp A number for the maximum realistic temperature
 #' @param min_RH A number for the minimum realistic RH
@@ -86,7 +87,11 @@ if ("temp" %in% names(envdata)) {
 #'
 #' @returns subset A dataframe with rows out of range removed
 #' @export
-#' @examples remove_faulty(envdata, max_RH = 70)
+#'
+#' @examples
+#' \dontrun{
+#'  remove_faulty(envdata, max_RH = 70)
+#' }
 remove_faulty <- function(envdata,
                           min_temp = -25,
                           max_temp = 35,
@@ -94,18 +99,18 @@ remove_faulty <- function(envdata,
                           max_RH = 90) {
   # Remove readings outside range but keep NA light readings
   subset <- dplyr::filter(envdata, (is.na(temp) |
-                                      (between(
+                                      (dplyr::between(
                                         temp, min_temp, max_temp
                                       ))
                                     &
-                                      (is.na(RH) | between(RH, min_RH, max_RH))))
+                                      (is.na(RH) | dplyr::between(RH, min_RH, max_RH))))
   message('Removed ', nrow(envdata) - nrow(subset), ' readings')
   subset
 }
 
 #' Subset readings
 #'
-#' @param envdata Dataframe returned from parse_brand
+#' @inherit remove_faulty
 #' @param store Store name or pattern to match in the location
 #' @param exclude_stores Store name or pattern in the location to filter out
 #' @param start_date Date in "YYYY-mm-dd" format
@@ -114,7 +119,9 @@ remove_faulty <- function(envdata,
 #' @returns subset, a filtered dataframe
 #' @export
 #'
-#' @examples subset_readings(envdata, store = "C", start_date = "2024-01-01", end_date = "2024-12-31")
+#' @examples
+#' \dontrun{
+#'  subset_readings(envdata, store = "C", start_date = "2024-01-01", end_date = "2024-12-31")
 subset_readings <- function(envdata,
                             store = FALSE,
                             exclude_stores = FALSE,

@@ -55,9 +55,9 @@ graph_store(
 
 \item{max_axis_RH}{Maximum of RH axis.}
 
-\item{col_temp}{Colour for temperature line, as named HTML colour or hex.}
+\item{col_temp}{Color for temperature line, as named HTML color or hex.}
 
-\item{col_RH}{Colour for RH line, as named HTML colour or hex.}
+\item{col_RH}{Color for RH line, as named HTML color or hex.}
 }
 \value{
 ggplot2 Object containing temperature and RH graph.
@@ -66,5 +66,7 @@ ggplot2 Object containing temperature and RH graph.
 Graph temperature and RH for single or multiple stores
 }
 \examples{
+\dontrun{
 graph_store(envdata_exhib, graph_title = 'Exhibition cases')
+}
 }

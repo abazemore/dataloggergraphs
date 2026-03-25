@@ -18,13 +18,17 @@ dmy_style <- lubridate::stamp('1 March 2021', orders = '%0d %B %Y')
 #' @param max_RH Maximum RH guideline.
 #' @param max_axis_temp Maximum of temperature axis.
 #' @param max_axis_RH Maximum of RH axis.
-#' @param col_temp Colour for temperature line, as named HTML colour or hex.
-#' @param col_RH Colour for RH line, as named HTML colour or hex.
+#' @param col_temp Color for temperature line, as named HTML color or hex.
+#' @param col_RH Color for RH line, as named HTML color or hex.
 #'
 #' @returns ggplot2 Object containing temperature and RH graph.
-#' @export
 #' @import ggplot2
-#' @examples graph_store(envdata_exhib, graph_title = 'Exhibition cases')
+#'
+#' @examples
+#' \dontrun{
+#' graph_store(envdata_exhib, graph_title = 'Exhibition cases')
+#' }
+#' @export
 graph_store <- function(envdata,
                         store = FALSE,
                         exclude_stores = FALSE,
@@ -96,10 +100,10 @@ graph_store <- function(envdata,
 
   # Create graph
   # with time on x axis, temperature on left y axis, and RH on right y axis
-  # Y scales 0-40º and 0-100% by default
-  # Dotted lines indicate BS4971 storage guidelines
-  return(
-    subset |> ggplot(mapping = aes(x = datetime, group = location)) +
+  # Y scales 0-40Cand 0-100%
+  # Dotted lines indicate storage guidelines
+
+    ggplot(subset, mapping = aes(x = datetime, group = location)) +
       geom_hline(
         yintercept = minmax[1],
         color = col_temp,
@@ -143,7 +147,7 @@ graph_store <- function(envdata,
       ) +
       labs(title = graph_title, subtitle = graph_subtitle) +
       scale_y_continuous(
-        name = 'Temperature (º C, red)',
+        name = 'Temperature (\u00B0C, red)',
         limits = c(0, max_axis_temp),
         sec.axis = sec_axis(
           ~ . * trh_ratio,
@@ -155,35 +159,25 @@ graph_store <- function(envdata,
         axis.title.y.left = element_text(color = col_temp),
         axis.title.y.right = element_text(color = col_RH)
       )
-  )
+
 }
 
 # Graph max/min/mean summary ----
 #' Graph temperature and RH summary for single or multiple stores
 #'
-#' @param envdata A dataframe returned from parse_datalogger.
-#' @param type 'annual', 'monthly', or 'daily'
-#' @param store A string matching a single store or a group of stores with a matching pattern.
-#' @param exclude_stores A string or vector to exclude a group of stores.
-#' @param graph_title Title of graph, else 'All stores at site' or first location if `store` specified.
-#' @param start_date A string to use as minimum date.
-#' @param end_date A string to use as maximum date.
-#' @param date_format Format of dates on x axis, like '%d/%m'.
-#' @param breaks Breaks on x axis, like '2 weeks'.
-#' @param standard Standard to use for temp/RH guidelines.
-#' @param min_temp Minimum temperature guideline.
-#' @param max_temp Maximum temperature guideline.
-#' @param min_RH Minimum RH guideline.
-#' @param max_RH Maximum RH guideline.
-#' @param max_axis_temp Maximum of temperature axis.
-#' @param max_axis_RH Maximum of RH axis.
-#' @param col_temp Colour for temperature line, as named HTML colour or hex.
-#' @param col_RH Colour for RH line, as named HTML colour or hex.
+#' @inheritParams graph_store
+#' @param type Summary interval, "annual", "monthly", or "daily"
+#' @param percentile Boolean to show 1-99th percentile ribbon
 #'
 #' @returns ggplot2 Object containing temperature and RH graph with mean line and min/max ribbons
-#' @export
+#'
 #' @import ggplot2
-#' @examples graph_summary(envdata_exhib, graph_title = 'Exhibition cases', type = 'daily')
+#'
+#' @examples
+#' \dontrun{
+#' graph_summary(envdata_exhib, graph_title = 'Exhibition cases', type = 'daily')
+#' }
+#' @export
 graph_summary <- function(envdata,
                           graph_title = FALSE,
                           type = 'monthly',
@@ -276,7 +270,7 @@ graph_summary <- function(envdata,
 
   #Create graph ----
   # with time on x axis, temperature on left y axis, and RH on right y axis
-  # Y scales 0-40º and 0-100%
+  # Y scales 0-40Cand 0-100%
   # Dotted lines indicate storage guidelines
   summary_graph <- ggplot(site_summary, mapping = aes(x = datetime, group = location)) +
     geom_hline(
@@ -332,7 +326,7 @@ graph_summary <- function(envdata,
                      date_labels = date_format) +
     labs(title = graph_title, subtitle = graph_subtitle) +
     scale_y_continuous(
-      name = 'Temperature (º C)',
+      name = 'Temperature (\u00B0 C)',
       limits = c(0, max_axis_temp),
       sec.axis = sec_axis(
         ~ . * trh_ratio,
@@ -367,23 +361,22 @@ graph_summary <- function(envdata,
 # Graph light ----
 #' Graph light data
 #'
-#' @param envdata A dataframe returned from parse_datalogger.
-#' @param store A string matching a single store or a group of stores with a matching pattern.
-#' @param exclude_stores A string or vector to exclude a group of stores.
-#' @param graph_title Title of graph, else 'All stores at site' or first location if `store` specified.
-#' @param start_date A string to use as minimum date.
-#' @param end_date A string to use as maximum date.
-#' @param breaks Breaks on x axis, like '2 weeks'.
-#' @param date_format Format of dates on x axis, like '%d/%m' or '12/24'.
+#' @inheritParams graph_store
 #' @param max_lux Value of maximum lux guideline.
 #' @param max_UV Value of maximum UV guideline
-#' @param col_lux Colour for visible light line, as named HTML colour or hex.
-#' @param col_UV Colour for UV line, as named HTML colour or hex.
+#' @param col_lux Color for visible light line, as named HTML color or hex.
+#' @param col_UV Color for UV line, as named HTML color or hex.
 #'
-#' @returns ggplot2 Object containing visible light and UV graph
-#' @export
+#' @return ggplot2 Object containing visible light and UV graph
+#'
 #' @import ggplot2
-#' @examples graph_light(envdata_exhib, graph_title = 'Exhibition cases')
+#'
+#' @examples
+#' \dontrun{
+#'  graph_light(envdata_exhib, graph_title = 'Exhibition cases')
+#' }
+#'
+#' @export
 graph_light <- function(envdata,
                         store = FALSE,
                         exclude_stores = FALSE,
@@ -471,7 +464,7 @@ graph_light <- function(envdata,
       labs(title = graph_title, subtitle = graph_subtitle) +
       scale_y_continuous(
         name = 'Visible light (lux)',
-        sec.axis = sec_axis(~ . / max(subset$lux), name = 'UV (μW/lumen)')
+        sec.axis = sec_axis(~ . / max(subset$lux), name = 'UV (\u03BCW/lumen)')
       ) +
       theme(
         axis.title.y.left = element_text(color = col_lux),
@@ -482,24 +475,17 @@ graph_light <- function(envdata,
 
 #' Graph light data summary
 #'
-#' @param envdata A dataframe returned from parse_datalogger.
-#' @param type 'annual', 'monthly', or 'daily'
-#' @param store A string matching a single store or a group of stores with a matching pattern.
-#' @param exclude_stores A string or vector to exclude a group of stores.
-#' @param graph_title Title of graph, else 'All stores at site' or first location if `store` specified.
-#' @param start_date A string to use as minimum date.
-#' @param end_date A string to use as maximum date.
-#' @param date_format Format of dates on x axis, like '%d/%m' or '12/24'.
-#' @param breaks Breaks on x axis, like '2 weeks'.
-#' @param max_lux Value of maximum lux guideline.
-#' @param max_UV Value of maximum UV guideline
-#' @param col_lux Colour for visible light line and ribbon, as named HTML colour or hex.
-#' @param col_UV Colour for UV line and ribbon, as named HTML colour or hex.
+#' @inheritParams graph_light
+#' @inheritParams graph_summary
 #'
 #' @returns ggplot2 Object containing visible light and UV graph with mean and min/max ribbons
 #' @export
 #' @import ggplot2
-#' @examples graph_light_summary(envdata_exhib, graph_title = 'Exhibition cases', type = 'daily')
+#'
+#' @examples
+#' \dontrun{
+#' graph_light_summary(envdata_exhib, graph_title = 'Exhibition cases', type = 'daily')
+#' }
 graph_light_summary <- function(envdata,
                                 graph_title = FALSE,
                                 store = FALSE,
@@ -584,7 +570,7 @@ graph_light_summary <- function(envdata,
                      date_breaks = breaks,
                      date_labels = date_format) +
     labs(title = graph_title, subtitle = graph_subtitle) +
-    scale_y_continuous(name = 'Visible light (lux)', sec.axis = sec_axis(name = 'UV (μW/lumen)')) +
+    scale_y_continuous(name = 'Visible light (lux)', sec.axis = sec_axis(name = 'UV (\u03BCW/lumen)')) +
     theme(
       axis.title.y.left = element_text(color = col_lux),
       axis.title.y.right = element_text(color = col_UV)
@@ -612,28 +598,24 @@ graph_light_summary <- function(envdata,
 
 #' Graph standard compliance
 #'
-#' @param envdata A dataframe returned from parse_datalogger
+#' @inheritParams graph_store
 #' @param type 'o' for overall graph, 't' for temperature, or 'r' for RH.
 #' @param standard A string for graph titles and to set minimum and maximum values if recognised.
-#' @param exclude_stores A string or vector to exclude a group of stores.
-#' @param graph_title Title of graph, else 'All stores at site' or first location if `store` specified.
-#' @param start_date A string to use as minimum date.
-#' @param end_date A string to use as maximum date.
-#' @param min_temp Minimum temperature guideline.
-#' @param max_temp Maximum temperature guideline.
-#' @param min_RH Minimum RH guideline.
-#' @param max_RH Maximum RH guideline.
-#' @param col_low Colour of low bar for temp or RH graph, as named HTML colour or hex.
-#' @param col_good Colour of good bar for temp or RH graph, as named HTML colour or hex.
-#' @param col_high Colour of high bar for temp or RH graph, as named HTML colour or hex.
-#' @param grad_bad Colour of low end of gradient for overall graph, as named HTML colour or hex.
-#' @param grad_mid Colour of midpoint of gradient for overall graph, as named HTML colour or hex.
-#' @param grad_good Colour of high end of gradient for overall graph, as named HTML colour or hex.
+#' @param col_low Color of low bar for temp or RH graph, as named HTML color or hex.
+#' @param col_good Color of good bar for temp or RH graph, as named HTML color or hex.
+#' @param col_high Color of high bar for temp or RH graph, as named HTML color or hex.
+#' @param grad_bad Color of low end of gradient for overall graph, as named HTML color or hex.
+#' @param grad_mid Color of midpoint of gradient for overall graph, as named HTML color or hex.
+#' @param grad_good Color of high end of gradient for overall graph, as named HTML color or hex.
 #'
 #' @returns ggplot2 Object containing bar graph of overall or temp/RH rating for each space in dataframe
 #' @export
 #' @import ggplot2
-#' @examples graph_compliance(envdata, 't', standard = 'Icon')
+#'
+#' @examples
+#' \dontrun{
+#'  graph_compliance(envdata, 't', standard = 'Icon')
+#' }
 graph_compliance <- function(envdata,
                              type = 'o',
                              standard = 'BS 4971',
@@ -803,31 +785,24 @@ graph_compliance <- function(envdata,
 
 #' Splice temp and RH graph on specified date
 #'
+#' @inheritParams graph_store
 #' @param envdata1 Dataframe returned from parse_datalogger for left of graph
 #' @param envdata2 Dataframe returned from parse_datalogger for right of graph
 #' @param store1 String to search location in envdata1
 #' @param store2 String to search location in envdata2
 #' @param move_date Date to splice data
-#' @param graph_title Title of graph, otherwise 'Store 1 to Store 2'.
-#' @param start_date A string to use as minimum date.
-#' @param end_date A string to use as maximum date.
-#' @param date_format Format of dates on x axis, like '%d/%m'.
-#' @param breaks Breaks on x axis, like '2 weeks'.
-#' @param standard Standard to use for temp/RH guidelines.
-#' @param min_temp Minimum temperature guideline.
-#' @param max_temp Maximum temperature guideline.
-#' @param min_RH Minimum RH guideline.
-#' @param max_RH Maximum RH guideline.
-#' @param max_axis_temp Maximum of temperature axis.
-#' @param max_axis_RH Maximum of RH axis.
-#' @param col_temp Colour for temperature line, as named HTML colour or hex.
-#' @param col_RH Colour for RH line, as named HTML colour or hex.
-#' @param col_line Colour for vertical line at splice date
+#' @param col_line Color of the line marking the move date as a named HTML color or hex code
 #'
 #' @returns ggplot2 Object containing temp and RH graph of two sets of data spliced on `move_date`.
 #' @export
 #' @import ggplot2
-#' @examples graph_move(envdata_old, envdata_new, store1 = 'Archive 1', store2 = 'Archive A', move_date = '2025-01-01')
+#'
+#' @examples
+#' \dontrun{
+#'  graph_move(envdata_old, envdata_new,
+#' store1 = 'Archive 1', store2 = 'Archive A',
+#' move_date = '2025-01-01')
+#' }
 graph_move <- function(envdata1,
                        envdata2,
                        store1,
@@ -860,7 +835,7 @@ graph_move <- function(envdata1,
     end_date = end_date,
     store = store2
   )
-  move <- dplyr::bindrows(premove, postmove)
+  move <- dplyr::bind_rows(premove, postmove)
   end_date <- max(move$datetime)
   if (graph_title == FALSE) {
     graph_title <- paste(premove$location[1], 'to', postmove$location[1])
@@ -874,7 +849,7 @@ graph_move <- function(envdata1,
   )
 
   #Create graph with time on x axis, temperature on left y axis, and RH on right y axis
-  #Y scales 0-40º and 0-100%
+  #Y scales 0-40\u00B0 and 0-100%
   return(
     move |> ggplot(mapping = aes(x = datetime)) +
       geom_hline(
@@ -910,7 +885,7 @@ graph_move <- function(envdata1,
       scale_x_datetime(name = 'Date') +
       labs(title = graph_title, subtitle = graph_subtitle) +
       scale_y_continuous(
-        name = 'Temperature (º C)',
+        name = 'Temperature (\u00B0 C)',
         limits = c(0, max_axis_temp),
         sec.axis = sec_axis( ~ . * trh_ratio, name = 'Rel. Humidity (%)')
       ) +

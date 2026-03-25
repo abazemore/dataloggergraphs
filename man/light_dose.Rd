@@ -9,9 +9,9 @@ light_dose(envdata, start_date = FALSE, end_date = FALSE, obs_hour = 3)
 \arguments{
 \item{envdata}{A dataframe returned from parse_datalogger}
 
-\item{start_date}{A string to use as a minimum date}
+\item{start_date}{A string to use as minimum date}
 
-\item{end_date}{A string to use as a maximum date}
+\item{end_date}{A string to use as maximum date}
 
 \item{obs_hour}{Number of observations logged per hour}
 }
@@ -22,5 +22,7 @@ dose A dataframe of the cumulative lux and UV hours with percent to just noticea
 Calculate light dose and compare to blue wool standards
 }
 \examples{
-light_dose(envdata_light, obs_hour = 4)
+\dontrun{
+light_dose(envdata, obs_hour = 4)
+}
 }

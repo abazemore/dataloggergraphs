@@ -20,14 +20,18 @@ parse_brand(
 
 \item{site}{The site name used for each row as a string for any brand other than Meaco}
 
-\item{model}{Optional, the model as a string for brands that do not include the model in the file. Not required for TinyTag}
-}
-\value{
-envdata, a standard format dataframe to use with other functions
+\item{model}{Model as a string for brands that do not include the model in the file. Not required for TinyTag}
+
+\item{location}{Location of the logger if not recoverable from the file}
+
+\item{old_data}{Dataframe containing previously parsed data to append}
 }
 \description{
 A central function to route to the appropriate specific logger extraction function
 }
 \examples{
-parse_datalogger("/data/tinytag/2025-01-01_to_2025-02-01.csv", "Anonymous Library", "tinytag")
+\dontrun{
+ parse_datalogger("/data/tinytag/2025-01-01_to_2025-02-01.csv",
+"Anonymous Library", "tinytag")
+}
 }

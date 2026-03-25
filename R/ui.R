@@ -51,7 +51,8 @@ ui <- fluidPage(theme = shinythemes::shinytheme("flatly"),
                                                           c("Annual" = "annual",
                                                             "Monthly" = "monthly",
                                                             # "Weekly" = "weekly",
-                                                            "Daily" = "daily"))),
+                                                            "Daily" = "daily"),
+                                                          selected = "monthly")),
                              uiOutput("input_daterange")
                            ),
                            mainPanel(

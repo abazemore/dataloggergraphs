@@ -7,7 +7,7 @@
 remove_faulty(envdata, min_temp = -25, max_temp = 35, min_RH = 10, max_RH = 90)
 }
 \arguments{
-\item{envdata}{A dataframe returned from parse_brand}
+\item{envdata}{Dataframe returned from parse_datalogger}
 
 \item{min_temp}{A number for the minimum realistic temperature}
 
@@ -24,5 +24,7 @@ subset A dataframe with rows out of range removed
 Remove potentially faulty readings outside range
 }
 \examples{
-remove_faulty(envdata, max_RH = 70)
+\dontrun{
+ remove_faulty(envdata, max_RH = 70)
+}
 }

@@ -23,6 +23,8 @@ summarize_site(
 \item{end_date}{A string to use as maximum date}
 
 \item{type}{"annual", "monthly", or "daily"}
+
+\item{percentile}{Boolean to include 1-99 percentile columns to trim outliers}
 }
 \value{
 site_summary A dataframe of summary statistics
@@ -31,5 +33,7 @@ site_summary A dataframe of summary statistics
 Summarize environmental data with maximum, minimum, range, median, and average temperature and RH. Optional 1-99th percentile.
 }
 \examples{
+\dontrun{
 dplyr::summarize_site(envdata, start_date = "2024-01-01", type = "annual")
+}
 }

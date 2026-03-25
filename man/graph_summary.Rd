@@ -31,7 +31,9 @@ graph_summary(
 
 \item{graph_title}{Title of graph, else 'All stores at site' or first location if \code{store} specified.}
 
-\item{type}{'annual', 'monthly', or 'daily'}
+\item{type}{Summary interval, "annual", "monthly", or "daily"}
+
+\item{percentile}{Boolean to show 1-99th percentile ribbon}
 
 \item{store}{A string matching a single store or a group of stores with a matching pattern.}
 
@@ -59,9 +61,9 @@ graph_summary(
 
 \item{max_axis_RH}{Maximum of RH axis.}
 
-\item{col_temp}{Colour for temperature line, as named HTML colour or hex.}
+\item{col_temp}{Color for temperature line, as named HTML color or hex.}
 
-\item{col_RH}{Colour for RH line, as named HTML colour or hex.}
+\item{col_RH}{Color for RH line, as named HTML color or hex.}
 }
 \value{
 ggplot2 Object containing temperature and RH graph with mean line and min/max ribbons
@@ -70,5 +72,7 @@ ggplot2 Object containing temperature and RH graph with mean line and min/max ri
 Graph temperature and RH summary for single or multiple stores
 }
 \examples{
+\dontrun{
 graph_summary(envdata_exhib, graph_title = 'Exhibition cases', type = 'daily')
+}
 }

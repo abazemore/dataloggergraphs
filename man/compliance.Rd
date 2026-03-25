@@ -17,21 +17,23 @@ compliance(
 )
 }
 \arguments{
-\item{envdata}{A dataframe returned from parse_datalogger.}
+\item{envdata}{A dataframe returned from parse_datalogger}
 
-\item{start_date}{A string to use as a minimum date.}
+\item{exclude_stores}{A string or list of stores to exclude from analysis}
 
-\item{end_date}{A string to use as a maximum date.}
+\item{start_date}{A string to use as minimum date}
 
-\item{standard}{Standard ("BS 4971", "PAS 198", "Icon", or "Bizot").}
+\item{end_date}{A string to use as maximum date}
 
-\item{min_temp}{Minimum temperature, overwrites standard if provided.}
+\item{standard}{Standard ("BS 4971", "PAS 198", "Icon", or "Bizot")}
 
-\item{max_temp}{Maximum temperature, overwrites standard if provided.}
+\item{min_temp}{Minimum temperature, overwrites standard if provided}
 
-\item{min_RH}{Minimum RH, overwrites standard if provided.}
+\item{max_temp}{Maximum temperature, overwrites standard if provided}
 
-\item{max_RH}{Maximum RH, overwrites standard if provided.}
+\item{min_RH}{Minimum RH, overwrites standard if provided}
+
+\item{max_RH}{Maximum RH, overwrites standard if provided}
 }
 \value{
 rated A dataframe with overall standard compliance, percentage of time above and below, and mean temp and RH.
@@ -40,5 +42,7 @@ rated A dataframe with overall standard compliance, percentage of time above and
 Calculate standard compliance for each area
 }
 \examples{
-compliance(envdata, standard = "Icon")
+\dontrun{
+ compliance(envdata, standard = "Icon")
+}
 }
