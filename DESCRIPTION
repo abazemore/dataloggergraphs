@@ -1,6 +1,6 @@
 Package: dataloggergraphs
 Title: dataloggergraphs
-Version: 0.0.1
+Version: 1.0.0
 Authors@R: 
     person("Avery", "Bazemore", , "avery.bazemore@gmail.com", role = c("aut", "cre"))
 Description: Standardizes data to a common format and provides summary and graphing functions for TRH and light data.
