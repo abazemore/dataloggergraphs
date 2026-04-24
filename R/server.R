@@ -1,13 +1,20 @@
 library(shiny)
-devtools::install_github("abazemore/dataloggergraphs")
 
 # Define server function
 server <- function(input, output) {
+  source("parse.R")
+  source("tidy.R")
+  source("summarize.R")
+  source("graph.R")
+  
   # Tab 1: Load files and parse ----
-
   envdata <- reactive({
     if (input$sample == TRUE) {
-      dataloggergraphs::sample_data
+      if("dataloggergraphs" %in% installed.packages()[, "Package"]) {
+        dataloggergraphs::sample_data
+      } else {
+        parse_previous("https://averybazemore.com/stuff/sample_data.csv")
+      }
     } else if (length(input$files) > 0) {
       parse_brand(input$files,
                   brand = input$brand,
